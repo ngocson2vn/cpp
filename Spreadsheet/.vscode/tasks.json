@@ -1,0 +1,50 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "build-objects",
+			"command": "/usr/bin/clang++",
+			"args": [
+				"-g",
+				"-std=c++11",
+				"-stdlib=libc++",
+				"-c",
+				"${fileDirname}/*.cpp"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+			"detail": "compiler: /usr/bin/clang++"
+		},
+		{
+			"type": "cppbuild",
+			"label": "build-program",
+			"command": "/usr/bin/clang++",
+			"args": [
+				"-g",
+				"-std=c++11",
+				"-stdlib=libc++",
+				"${fileDirname}/*.o",
+				"-o",
+				"${fileDirname}/${fileBasenameNoExtension}"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"dependsOn": ["build-objects"],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "compiler: /usr/bin/clang++"
+		}
+	]
+}
