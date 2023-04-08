@@ -9,6 +9,7 @@
 				"-g",
 				"-std=c++11",
 				"-stdlib=libc++",
+				"-fno-elide-constructors",
 				"-c",
 				"${fileDirname}/*.cpp"
 			],
@@ -29,6 +30,7 @@
 				"-g",
 				"-std=c++11",
 				"-stdlib=libc++",
+				"-fno-elide-constructors",
 				"${fileDirname}/*.o",
 				"-o",
 				"${fileDirname}/${fileBasenameNoExtension}"
