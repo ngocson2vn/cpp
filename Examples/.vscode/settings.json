@@ -68,6 +68,20 @@
         "concepts": "cpp",
         "__memory": "cpp",
         "memory_resource": "cpp",
-        "future": "cpp"
-    }
+        "future": "cpp",
+        "__tree": "cpp",
+        "cinttypes": "cpp",
+        "condition_variable": "cpp",
+        "deque": "cpp",
+        "coroutine": "cpp",
+        "list": "cpp",
+        "map": "cpp",
+        "queue": "cpp",
+        "shared_mutex": "cpp",
+        "stack": "cpp",
+        "thread": "cpp",
+        "typeindex": "cpp",
+        "unordered_set": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
 }

@@ -9,6 +9,11 @@
 				"-g",
 				"-std=c++14",
 				"-stdlib=libc++",
+				"-Wno-c++17-extensions",
+				"-Wno-unqualified-std-cast-call",
+				"-I/opt/homebrew/include",
+				"-L/opt/homebrew/lib",
+				"-lfolly",
 				"${file}",
 				"-o",
 				"${fileDirname}/${fileBasenameNoExtension}"
