@@ -1,0 +1,1 @@
+g++ -o TestSpreadsheet SpreadsheetCell.cpp Spreadsheet.cpp TestSpreadsheet.cpp

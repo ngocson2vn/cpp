@@ -1,0 +1,1 @@
+g++ -o TestInheritance Base.cpp Derived.cpp TestInheritance.cpp
