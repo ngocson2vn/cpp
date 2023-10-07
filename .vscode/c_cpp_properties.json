@@ -13,6 +13,18 @@
             "cStandard": "c17",
             "cppStandard": "c++14",
             "intelliSenseMode": "macos-clang-arm64"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "/usr/local/cuda/include",
+                "${workspaceFolder}/Cuda"
+            ],
+            "defines": [],
+            "cStandard": "c17",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerPath": "/usr/local/bin/gcc"
         }
     ],
     "version": 4
