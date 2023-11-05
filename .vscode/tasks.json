@@ -2,12 +2,13 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: clang++ build active file",
-            "command": "/usr/bin/clang++",
+            "label": "C/C++: g++ build active file",
+            "command": "/usr/bin/g++",
             "args": [
                 "-g",
 				"-std=c++14",
 				"-stdlib=libc++",
+                "-I/opt/homebrew/include",
                 "${file}",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
