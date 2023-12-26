@@ -9,9 +9,9 @@ show disassembly-flavor
 
 # Measure execution time
 python import time
-python s=time.time()
+python s=time.time_ns()
 continue
-python print(time.time() - s)
+python print(time.time_ns() - s)
 
 # Check hang threads
 set pagination off
