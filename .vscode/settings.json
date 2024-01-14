@@ -44,18 +44,37 @@
         "ostream": "cpp",
         "sstream": "cpp",
         "streambuf": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "unordered_set": "cpp",
+        "__bit_reference": "cpp",
+        "__hash_table": "cpp",
+        "__string": "cpp",
+        "__tree": "cpp",
+        "map": "cpp",
+        "set": "cpp",
+        "ctime": "cpp",
+        "strstream": "cpp",
+        "bitset": "cpp",
+        "chrono": "cpp",
+        "codecvt": "cpp",
+        "complex": "cpp",
+        "condition_variable": "cpp",
+        "forward_list": "cpp",
+        "list": "cpp",
+        "ratio": "cpp",
+        "regex": "cpp",
+        "source_location": "cpp",
+        "iomanip": "cpp",
+        "mutex": "cpp",
+        "shared_mutex": "cpp",
+        "thread": "cpp",
+        "cfenv": "cpp",
+        "typeindex": "cpp",
+        "variant": "cpp",
+        "__nullptr": "cpp",
+        "bit": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "C_Cpp.default.compilerPath": "/usr/bin/g++",
-    "C_Cpp.default.includePath": [
-        "/usr/local/cuda/include",
-        "${projectRoot/Cuda",
-        "/opt/homebrew/include"
-    ],
-    "C_Cpp.default.browse.path": [
-        "/usr/local/cuda/include",
-        "${projectRoot/Cuda",
-        "/opt/homebrew/include"
-    ]
+    "git.ignoreLimitWarning": true
 }

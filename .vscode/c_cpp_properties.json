@@ -1,31 +1,21 @@
 {
     "configurations": [
         {
-            "name": "Mac",
-            "includePath": [
-                "${workspaceFolder}/**",
-                "/opt/homebrew/include"
-            ],
-            "defines": [],
-            "macFrameworkPath": [
-                "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
-            ],
-            "compilerPath": "/usr/bin/g++",
-            "cStandard": "c17",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "linux-gcc-x64"
-        },
-        {
             "name": "Linux",
             "includePath": [
-                "/usr/local/cuda/include",
-                "${workspaceFolder}/Cuda"
+                "${workspaceFolder}/**"
             ],
             "defines": [],
             "cStandard": "c17",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64",
-            "compilerPath": "/usr/local/bin/gcc"
+            "browse": {
+                "path": [
+                    "/usr/local/cuda/include",
+                    "${workspaceFolder}/Cuda",
+                    "${workspaceFolder}/Folly/folly/include"
+                ]
+            }
         }
     ],
     "version": 4
