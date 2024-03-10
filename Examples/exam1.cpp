@@ -1,38 +1,17 @@
 #include <iostream>
-using namespace std;
+#include <limits>
 
-class shared
-{
-    static int a;
-    int b;
-
-public:
-    void set(int i, int j)
-    {
-        a = i;
-        b = j;
-    }
-
-    void show();
-};
-
-int shared::a; // define a
-
-void shared::show()
-{
-    cout << "This is static a: " << a;
-    cout << "\nThis is non-static b: " << b;
-    cout << "\n";
+size_t get_bs() {
+    int64_t bs = -1;
+    std::cout << "bs1 = " << bs << std::endl;
+    return bs;
 }
 
 int main()
 {
-    shared x, y;
-    x.set(1, 1); // set a to 1
-    x.show();
-    y.set(2, 2); // change a to 2
-    y.show();
-    x.show(); /* Here, a has been changed for both x and y 
-                 because a is shared by both objects. */
+    size_t maxvalue = std::numeric_limits<size_t>::max();
+    std::cout << "maxvalue = " << maxvalue << std::endl;
+    size_t bs = get_bs();
+    std::cout << "bs2 = " << bs << std::endl;
     return 0;
 }

@@ -44,16 +44,15 @@
         "ostream": "cpp",
         "sstream": "cpp",
         "streambuf": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "__locale": "cpp",
+        "chrono": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "C_Cpp.default.compilerPath": "/usr/local/bin/gcc",
-    "C_Cpp.default.includePath": [
-        "/usr/local/cuda/include",
-        "${projectRoot/Cuda"
-    ],
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: WebKit, ColumnLimit: 120, PointerAlignment: Left}",
     "C_Cpp.default.browse.path": [
         "/usr/local/cuda/include",
-        "${projectRoot/Cuda"
+        "${workspaceFolder}/**"
     ]
 }
