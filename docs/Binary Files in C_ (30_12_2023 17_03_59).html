@@ -1,0 +1,406 @@
+<!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en"> <html style><!--
+ Page saved with SingleFile 
+ url: https://www.eecs.umich.edu/courses/eecs380/HANDOUTS/cppBinaryFileIO-2.html 
+ saved date: Sat Dec 30 2023 17:03:59 GMT+0800 (Singapore Standard Time)
+--><meta charset=utf-8>
+<meta name=GENERATOR content="Mozilla/4.61 [en] (Win95; U) [Netscape]">
+<title>Binary Files in C++</title>
+<style id=ctre_styles>@media (prefers-color-scheme:dark){}</style><meta name=referrer content=no-referrer><link type=image/x-icon rel="shortcut icon" href=data:image/vnd.microsoft.icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAgZJREFUeNqUUktrU0EUPvOiubQ3pLEaXbRofEDUVHwEF4L4KBWlf0BQSouJaMG1Lt20ulJ056UiulO3LkQwdSE+FmKoFqEVQkpTUWisSdubmzv3dGZuSq3VhTMDwznffOec75whkB6E/1kcAEEGqw5GAchvD/5EOTCyOSZIE4Rv8wEgrnBQ7URc0GYEMrsg+fZ29v56ntGGCYA3n/aMPPNBCG16jf4j1u0LL0iA2qTYN3Kacwrx2JQObuIO999/+zWX/7IEhKQ6rbvZ53ZrCcKiWkAwpFUPX37o8+oxQAYBU34n95FHBQjqDEzbbSWQTENI3hR6K4vIqnb34/Ho5aOVVuu7yQLx9pmNdG+mi5/vfQIylKYO67lx/HPZ46sdIFD5lZyd27I7+frSmUfaE8DUzGHbqibiE4oSKqe6taRJ8PzI0IM9xfIhDSJUa13Ze/t+zHeYV0oUMQTEmq8aqX229XNs2s85BzVBwJXRU2OT9bbIYliB6yMEAdu0K+Ocre1PjnNSpyRIJzofvmvBpXSxnBrOi9FzbmbnJ8EUJ9i2YWuhZJPUyezELUc3zvQaInDs6sVXRRc43RHlk3ccrXsFOnEtR6UypJlseCToUl0JCw3OCPhroAAVeGCwu4OrGzFUBoU5Ca4ZlSDrIQLpAfDlmg/JmMliJrAO4joZ5//4y3+BlgUYADtnwe9eyBccAAAAAElFTkSuQmCC><link rel=canonical href=https://www.eecs.umich.edu/courses/eecs380/HANDOUTS/cppBinaryFileIO-2.html><meta http-equiv=content-security-policy content="default-src 'none'; font-src 'self' data:; img-src 'self' data:; style-src 'unsafe-inline'; media-src 'self' data:; script-src 'unsafe-inline' data:; object-src 'self' data:; frame-src 'self' data:;"><style>img[src="data:,"],source[src="data:,"]{display:none!important}</style></head>
+<body>
+<center>
+<h1>
+Binary Files with C++</h1></center>
+<center>R.A. Ford
+<br>Department of Math. and Computer Science
+<br>Mount Allison University
+<br>Sackville, NB</center>
+<h2>
+Introduction</h2>
+Using streams for file processing is certainly possible in C++, but most
+C++ textbooks do not include any information regarding the full functionality
+of streams. This document has been formed to assist students with a background
+in C++ and data structures with a full description of the C++ stream library.
+The document is based on the GNU CPP library documentation which at times
+is not easy to read, especially without examples.
+<p>The insertion and extraction operators (i.e.&nbsp;<t>&lt;&lt;</t> and&nbsp;<t>&gt;&gt;</t>
+are meant to be used by programs for writing to and reading from text files;
+it is assumed that the programmer is familiar with the differences between
+these two file formats.
+<p>In reality there are dozens of extensions with little documentation
+of ordinary text streams. An additional section will be added to this document
+at a later time.
+<h2>
+Basics of File I/O</h2>
+Accessing a binary file from a C++ program (by not using the old C functions)
+requires firstly attaching a stream variable to the file. The usual stream
+classes&nbsp;<t>ofstream</t> (output file stream) and&nbsp;<t>ifstream</t>
+(input file stream) are still the types of streams to use. A an additional
+type called an&nbsp;<t>fstream</t> is provided which allows for files that
+can be written to and read from if this is a desirable property (in the
+design of database type programs, this is often the case).
+<p>Before any operation can take place on a file, it of course must be
+<i>opened</i>,
+and when you are finished with the file, it should be closed to avoid loss
+of data.
+<h2>
+Opening a Stream</h2>
+The&nbsp;<t>ifstream</t> and&nbsp;<t>ofstream</t> each have member functions
+named&nbsp;<t>open</t> which are used to attaching the stream to a physical
+filename and opening the file for either reading or writing. The&nbsp;<t>open<t>
+member function also provides for a couple of optional arguments that are
+not often described. The most general prototype of this function is
+<pre>&nbsp; void open(const char *filename[, int mode][, int prot]);</pre>
+The format that I've used indicates that the&nbsp;<t>mode</t> and&nbsp;<t>prot</t>
+arguments are optional.
+<p>The first argument is always the name of the file on the disk that the
+stream will be attached to. The&nbsp;<t>const</t> modifier is included
+so that a programmer can write the name of the file (inside double quotes)
+in the function call. The only tricky part about using the&nbsp;<t>open</t>
+member function is under DOS based systems (includes Windows) in which
+directories are separated by a \; recall that the backslash character has
+a special meaning in C++ strings.
+<p>The&nbsp;<t>prot</t> parameter is used to specify the protection (permission)
+of the file under multiuser operating systems such as Unix. It allows you
+to specify which users are allowed to look at this file. Under DOS/Windows,
+this parameter is never used. The&nbsp;<t>mode</t> parameter is usually
+left out when dealing with text files, but there are some very useful situations
+under binary files for which this parameter must be set. There are a number
+of options that can be given for this parameter. If you need to specify
+more than one of them simply place a vertical bar between them.
+<ul>
+<li>
+<t>ios::in</t> This indicates that the stream will be used for input. This
+may seem redundant for&nbsp;<t>ifstreams</t> which are automatically marked
+for input when they are opened, but it has to be used occasionally. When
+you call&nbsp;<t>open</t> with no second parameter, the parameter is assumed
+to be&nbsp;<t>ios::in</t> but if you give any other parameter such as&nbsp;<t>ios::binary</t>
+you will need to specify that the file is an input file as well.</li>
+<li>
+<t>ios::out</t> This indicates that the stream will be used for output.
+Like&nbsp;<t>ios::in</t> this may seem redundant for&nbsp;<t>ofstream</t>s
+but for the same reason as above, it usually has to be given.</li>
+<li>
+<t>ios::ate</t> This causes the file pointer to point&nbsp; <b>at the&nbsp;
+end </b>of the file when the file is opened.</li>
+<li>
+<t>ios::trunc</t> This causes the all the existing data in the file to
+be discarded (erased) when the file is opened. Be very careful not to use
+this option on a file you do not want destroyed!</li>
+<li>
+<t>ios::binary</t> This causes the file to be accessed as a binary file. Most
+likely you will need to set this option. If you forget to set this option,
+many strange problems will occur when reading certain characters like `end
+of line' and `end of file'.</li>
+</ul>
+Example of opening a binary file:
+<pre>int main()
+{
+&nbsp; ifstream infile;
+&nbsp; infile.open("hello.dat", ios::binary | ios::in);
+// rest of program
+
+}</pre>
+<h2>
+Writing to a Binary File</h2>
+I mentioned once that&nbsp;<t>&lt;&lt;</t> is used to write data to a text
+file. If you had a variable&nbsp;<t>x</t> that contained the value 354
+and you used the statment&nbsp;<t>outfile &lt;&lt; x;</t> this would cause
+the character 3, the character 5, and the character 4 to be written (in
+ASCII form) to the file. This is not binary form which would only require
+16-bits. The&nbsp;<t>ofstream</t> class provides a member function named&nbsp;<t>write</t>
+that allows for information to be written in binary form to the stream.
+The prototype of the&nbsp;<t>write</t> function is
+<pre>&nbsp; ostream&amp; write(void *buffer, streamsize n);</pre>
+This function causes <i>n</i> bytes to be written from the memory location
+given by the buffer to the disk and moves the file pointer ahead <i>n</i>
+bytes.
+<p>The parameters types require a little bit of explanation. Even though
+the return type is&nbsp;<t>ofstream&amp;</t> the return value is usually
+ignored by most programers. The&nbsp;<t>buffer</t> pointer is of type&nbsp;<t>void</t>
+this allows for any type of variable to be used as the first parameter.
+You should not be writing functions with&nbsp;<t>void</t> parameters, this
+is a very tricky part of programming. The type&nbsp;<t>streamsize</t> is
+simply a positive integer.
+<p>It is rare that you will know exactly how many bytes a particular variable
+is. To obtain this information, C++ provides a macro (its like a function)
+named&nbsp;<t>sizeof</t> that takes exactly one parameter and returns the
+size of the parameter in terms of bytes required for storage.
+<p>Below is an example of using the&nbsp;<t>sizeof</t> macro to obtain
+the size of a variable and writing the contents of a variable to disk.
+Notice the use of a structure rather than a class; you <b>should not use
+this method for writing classes to binary files!</b> See the section entitled
+<i>Writing
+Classes to Files</i> for a description of how this should be done.
+<pre>struct Person
+{
+&nbsp; char name[50];
+&nbsp; int age;
+&nbsp; char phone[24];
+};
+
+int main()
+{
+&nbsp; Person me = {"Robert", 28, "364-2534"};
+&nbsp; Person book[30];
+&nbsp; int x = 123;
+&nbsp; double fx = 34.54;
+&nbsp; ofstream outfile;
+&nbsp; outfile.open("junk.dat", ios::binary | ios::out);
+&nbsp; outfile.write(&amp;x, sizeof(int)); // sizeof can take a type
+&nbsp; outfile.write(&amp;fx, sizeof(fx)); // or it can take a variable name
+&nbsp; outfile.write(&amp;me, sizeof(me));
+&nbsp; outfile.write(book, 30*sizeof(Person))
+&nbsp; outfile.close();
+}</pre>
+<h2>
+Reading from a Binary File</h2>
+Reading data from a binary file is just like writing it except that the
+function is now called&nbsp;<t>read</t> instead of&nbsp;<t>write</t> When
+reading data from a file there are a couple of new things to watch out
+for:
+<ul>
+<li>
+It is the responsibility of the programmer to make sure that the buffer
+is large enough to hold all the data that is being read. The following
+code segment would probably result in a crash unless the size of a integer
+was 7 bytes (unlikely number):</li>
+</ul>
+<ul>&nbsp; <tt>int main()</tt>
+<br><tt>&nbsp; {</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; int x;</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; ifstream infile;</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; infile.open("silly.dat", ios::binary | ios::in)</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; infile.read(&amp;x, 7); // reads 7 bytes into
+a cell that is either 2 or 4</tt>
+<br><tt>&nbsp; }</tt>
+<br>&nbsp;
+<li>
+After reading something from the file, the&nbsp;<t>fail()</t> member function
+should be called to determine if the operation completed succesfully. In
+C++, no file operations cause the program to stop. If an error occurs and
+you do not check it, then your program will be running unreliably. See
+a section further in this document regarding the detection of errors.</li>
+</ul>
+<h2>
+File Pointer</h2>
+<ol>&nbsp;</ol>
+Whenever data is read from or writen to a file, the data is put or taken
+from a location inside the file described by the <b>file pointer</b>. In
+a sequential access file, information is always read from start to end
+and every time <i>n</i> bytes is read or written, the file pointer is moved
+<i>n</i>
+bytes ahead. In a random access file, we are allowed to moved the file
+pointer to different locations to read data at various locations within
+a file. Think of a database full of store items. When the item is scanned
+at the checkout, the barcode is used to look up a description and price
+of the item. If the file were sequential access, we would have to start
+searching at the beginning of the file which is probably slower than we
+would like. This is not a course in file processing, but it suffices to
+say that if we could move the file pointer directly to the record containing
+the data we would have to read from the file just once.
+<p>The&nbsp;<t>tellp()</t> member function has a prototype of the form
+<p><tt>streampos tellp();</tt>
+<p>This function accepts no parameters, but returns the location given
+in bytes from the beginning of the file where the file pointer is currently
+sitting. The next read or write will take place from this location.
+<p>The&nbsp;<t>seekp()</t> member function has a prototype of the form
+<p><tt>void seekp(streampos location, int relative);</tt>
+<p>This causes the file pointer to move to another location within the
+file. The location specifies the number of bytes that will be used to determine
+the location and the&nbsp;<t>relative</t> parameter indicates whether this
+is some sort of absolute or relative positioning request. Possible values
+for&nbsp;<t>relative</t> are:
+<br>&nbsp;
+<ol>
+<li>
+<t>ios::beg</t> This indicates that the location is the number of bytes
+from the beginning of the file.</li>
+<li>
+<t>ios::cur</t> This indicates that the location is the number of bytes
+from the current file pointer location. This allows for a relative positioning
+of the file pointer.</li>
+<li>
+<t>ios::end</t> This indicates that the location is the number of bytes
+from the end of the file.</li>
+</ol>
+We consider an example that uses both obtaining and setting the file pointer
+location:
+<p><tt>int main()</tt>
+<br><tt>{</tt>
+<br><tt>&nbsp; int x;</tt>
+<br><tt>&nbsp; streampos pos;</tt>
+<br><tt>&nbsp; ifstream infile;</tt>
+<br><tt>&nbsp; infile.open("silly.dat", ios::binary | ios::in);</tt>
+<br><tt>&nbsp; infile.seekp(243, ios::beg); // move 243 bytes into the
+file</tt>
+<br><tt>&nbsp; infile.read(&amp;x, sizeof(x));</tt>
+<br><tt>&nbsp; pos = infile.tellg();</tt>
+<br><tt>&nbsp; cout &lt;&lt; "The file pointer is now at location " &lt;&lt;
+pos &lt;&lt; endl;</tt>
+<br><tt>&nbsp; infile.seekp(0,ios::end); // seek to the end of the file</tt>
+<br><tt>&nbsp; infile.seekp(-10, ios::cur); // back up 10 bytes</tt>
+<br><tt>&nbsp; infile.close();</tt>
+<br><tt>}</tt>
+<br>&nbsp;
+<h2>
+Writing Classes to Binary Files</h2>
+The easiest way to store records in files is to use a<t>struct</t> If you
+are keeping track of records in memory structures using classes, then saving
+these classes to disk takes a little extra work. You cannot simply use
+a&nbsp;<t>write</t> member function and give the address of the object
+as the buffer. The reason for this is the presence of member functions.
+It would not make sense to save the member functions; these member functions
+end up getting saved as memory locations which would cause your computer
+to crash if you ever loaded one from disk with an old memory location.
+It is possible to write <i>objects</i> to disk but it requires that the
+object have a member function associated with it.
+<p>My usual approach is to insert a member function named&nbsp;<t>read</t>
+and&nbsp;<t>write</t> in each member function. These functions should take
+an&nbsp;<t>fstream</t> as a parameter as the stream to save itself to.
+Your program should then open the stream and call the member function with
+the appropriate stream. The member function should then go through each
+data field of the object writing them out in a particular order. The&nbsp;<t>read</t>
+member function must retrieve the information from the disk in exactly
+the same order.
+<p>The example for this section is a little involved, so I've eliminated
+the non-file member functions. <tt>\begin{verbatim}</tt>
+<br><tt>#include &lt;iostream.h&gt;</tt>
+<br><tt>#include &lt;stdlib.h&gt;</tt>
+<br><tt>#include &lt;fstream.h&gt;</tt>
+<p><tt>class Student</tt>
+<br><tt>{</tt>
+<br><tt>&nbsp; private:</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; int number;</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; char name[50];</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; float gpa;</tt>
+<br><tt>&nbsp; public:</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; Student(int n, const char *s, float g);</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; void save(ofstream&amp; of);</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; void load(ifstream&amp; inf);</tt>
+<br><tt>};</tt>
+<p><tt>main()</tt>
+<br><tt>{</tt>
+<br><tt>&nbsp; Student me(11321, "Myself", 4.3);</tt>
+<br><tt>&nbsp; ofstream myfile;</tt>
+<br><tt>&nbsp; myfile.open("silly.dat", ios::binary | ios::out);</tt>
+<br><tt>&nbsp; me.save(myfile);</tt>
+<br><tt>&nbsp; myfile.close();</tt>
+<br><tt>&nbsp; return(0);</tt>
+<br><tt>}</tt>
+<p><tt>void Student::save(ofstream&amp; of)</tt>
+<br><tt>{</tt>
+<br><tt>&nbsp; of.write(&amp;number, sizeof(number));</tt>
+<br><tt>&nbsp; of.write(name, sizeof(name));</tt>
+<br><tt>&nbsp; of.write(&amp;gpa, sizeof(gpa));</tt>
+<br><tt>}</tt>
+<p><tt>void Student::load(ifstream&amp; inf)</tt>
+<br><tt>{</tt>
+<br><tt>&nbsp; inf.read(&amp;number, sizeof(number));</tt>
+<br><tt>&nbsp; inf.read(name, sizeof(name));</tt>
+<br><tt>&nbsp; inf.read(&amp;gpa, sizeof(gpa));</tt>
+<br><tt>}</tt>
+<br>&nbsp;
+<br>&nbsp;
+<h2>
+What Went Wrong?</h2>
+In this section, I will point out a couple of methods of determining if
+a file operation was successful and if not, a couple of methods of determing
+roughly what went wrong. After every disk operation, a well written program
+will call the member function&nbsp;<t>fail()</t> to see if the operation
+completed successfully. It is up to the programmer to determine what should
+occur when a file operation goes bad. Essentially there are three possibilities:
+<br>&nbsp;
+<ul>
+<li>
+Ignore the problem and hope it never happens. This is an okay approach
+to dealing with errors for small programs written to test an idea, but
+a fully working version of a program should never assume that the user
+will not make a mistake.</li>
+<li>
+If an error occurs, call&nbsp;<t>exit(EXIT_FAILURE);</t> and have the program
+terminate. This is slighly better than just hoping it doesn't happen, but
+in a full version of a program, this could be a real nuisance to the user.
+Think of what would happen if you spent 5 hours typing an essay, then tried
+to save it to the&nbsp;<t>T:</t> which did not exist. If your program just
+aborted then you would have lost 5 hours of work.</li>
+<li>
+When an error occurs, let the user try to correct the error and try the
+operation again. This is the preferred method as far as the user is concerned,
+but is usually not trivial to program. You should try to implement this
+as much as possible.</li>
+</ul>
+<p><br>An unfortunate situation arises when dealing with errors, they are
+generally physical things which make them operating system dependent. Next,
+I will list the ANSI (the standard) approach to dealing with errors and
+the DOS approach to dealing with errors. The ANSI approach is much more
+general and therefore the error messages will not be precise, but the ANSI
+approach will work no matter which C++ compiler you use. The DOS error
+handling eliminates some of the confusion about what happened but obviously
+is only good on DOS machines that support the library (Turbo C++, Borland
+C++, and GNU G++ support this library). To make things a little uglier,
+there appears to be no error support built into streams other than the&nbsp;<t>fail()</t>
+function. To combat errors we have to rely on some existing C functions
+which are no problem to use from C++ since C++ is simply an extension of
+C.
+<br>&nbsp;
+<h3>
+ANSI Errors</h3>
+<ol>ANSI C supports a global variable (oh no, a global variable!) named&nbsp;<t>errno</t>
+which can be accessed by including&nbsp;<t>errno.h</t> When errors occur
+the variable is set to a standard error code which should be equivalent
+on all operating systems. There are too many error codes to bother listing
+in this document. Usually the best way to discover all error codes is to
+look at the manual page or on-line help searching on the keyword&nbsp;<t>errno</t>
+The include file does define a set of constants that can be used to determine
+the type of error that occurred. For example, error code 22 indicates that
+the file you just tried to open did not exist. A slightly better way to
+say 22 is to use the constant ENOENT. There is a function in&nbsp;<t>stdio.h</t>
+named&nbsp;<t>perror</t> that takes one string as a parameter. When this
+function is called, the string is displayed on the screen followed by a
+colon then by a message that describes the value in&nbsp;<t>errno</t> This
+can be handy if you do not want to write error handlers and just want the
+program to halt. Below is a simple program that reads a filename from the
+user, opens the file and displays the fact that the drive was not ready,
+the file did not exist or the standard error message.
+<p>&nbsp;<tt>main()</tt>
+<br><tt>{</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; ifstream data; char filename[50];</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; cout &lt;&lt; "file to open&gt; ";</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; cin.getline(filename, 50); data.open(filename);</tt>
+<br><tt>&nbsp;&nbsp;&nbsp; if (data.fail())</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; switch (errno)</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+{</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+case EACCES:</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+// this is set if the drive is not ready in DOS</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cout &lt;&lt; "Drive not ready or permission denied" &lt;&lt; endl;</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+break;</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+case ENOENT:</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cout &lt;&lt; "Could not find this file" &lt;&lt; endl;</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+break;</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+default:</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+perror("opening data file");</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; exit(EXIT_FAILURE);</tt>
+<br><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; // a real program would
+then loop back and ask the user to try again. } ...</tt></p></ol>
+<h3>
+DOS Extended Errors</h3>
+<ol>If you look at the errors given in the ANSI list you will notice that
+not many of them are really geared towards DOS; i.e. you don't know for
+sure if a sector was bad on a disk or the drive door was left open. This
+is because the ANSI standard was more or less defined on UNIX system where
+these types of errors are never seen by the users. Most DOS based compilers
+provide a couple of functions for acessing the DOS extended error which
+usuallt provides a much more accurate description of the error.</ol>
+</t></t>
