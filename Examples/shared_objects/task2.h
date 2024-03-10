@@ -2,4 +2,8 @@
 
 #include "task1.h"
 
-void perform();
+#define EXPORT __attribute__((visibility("default")))
+
+extern "C" {
+  EXPORT void perform();
+}
