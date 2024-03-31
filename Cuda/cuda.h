@@ -6,7 +6,7 @@
 extern "C" {
 #endif
 
-void mat_add(int** MatA, int** MatB, int** MatC);
+int* mat_add(int* MatA, int* MatB, const int N);
 
 #ifdef __cplusplus
 }

@@ -25,10 +25,56 @@
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
+            "environment": [
+                {
+                    "name": "CPLUS_INCLUDE_PATH",
+                    "value": "/Users/bytedance/.local/include"
+                }
+            ],
             "externalConsole": false,
-            "MIMode": "lldb",
-            "preLaunchTask": "build-folly-example"
+            "MIMode": "gdb",
+            "preLaunchTask": "C/C++: g++ build active file"
+        },
+        {
+            "name": "Launch Cuda",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/Cuda/main",
+            "args": [],
+            "cwd": "${workspaceFolder}/Cuda",
+            "environment": [],
+            "stopAtEntry": false,
+            "linux": {
+                "sourceFileMap": {
+                    "/proc/self/cwd": {
+                        "editorPath": "${workspaceRoot}/Cuda",
+                        "useForBreakpoints": false
+                    }
+                }
+            },
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Test",
+                    "text": "python import sys;sys.path.insert(0, '/data00/home/son.nguyen/workspace/tools/gdb_pretty_print/python'); from libstdcxx.v6.printers import register_libstdcxx_printers; register_libstdcxx_printers(None)",
+                    "ignoreFailures": false
+                },
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "",
+                    "text": "directory ${workspaceRoot}/Cuda"
+                }
+            ]
         }
     ]
 }
