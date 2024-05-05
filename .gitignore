@@ -1,3 +1,4 @@
+.vscode/vc.db*
 *.dSYM
 *.o
 Folly/folly/

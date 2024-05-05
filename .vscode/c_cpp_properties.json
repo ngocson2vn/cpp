@@ -12,9 +12,10 @@
             "browse": {
                 "path": [
                     "/usr/local/cuda/include",
-                    "${workspaceFolder}/Cuda",
                     "${workspaceFolder}/Folly/folly/include"
-                ]
+                ],
+                "databaseFilename": "${workspaceFolder}/.vscode/vc.db",
+                "limitSymbolsToIncludedHeaders": false
             }
         }
     ],

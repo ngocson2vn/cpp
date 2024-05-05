@@ -1,0 +1,30 @@
+/usr/bin/g++ \
+-g \
+-std=c++14 \
+-Ifolly/include \
+-Iopenssl/include \
+-Iboost/include \
+-Lopenssl/lib \
+-Lboost/lib \
+-Lfolly/lib \
+-o folly_future \
+folly_future.cpp \
+-lfolly \
+-lssl \
+-lcrypto \
+-lgflags \
+-lpthread \
+-lglog \
+-levent \
+-ldouble-conversion \
+-lfmt \
+-lboost_context \
+-lboost_chrono \
+-lboost_date_time \
+-lboost_filesystem \
+-lboost_program_options \
+-lboost_regex \
+-lboost_system \
+-lboost_thread \
+-lboost_atomic \
+-levent

@@ -1,22 +1,36 @@
 #include "SpreadsheetCell.h"
+#include <cstdlib>
 
-SpreadsheetCell::SpreadsheetCell(double initialValue)
-{
+SpreadsheetCell::SpreadsheetCell(const std::string& name, double initialValue) {
+  mId = std::rand();
+  std::cout << "SpreadsheetCell Normal Constructor; this=" << this << " mId=" << mId << std::endl;
+  setName(name);
   setValue(initialValue);
 }
 
 SpreadsheetCell::SpreadsheetCell(const SpreadsheetCell& src) noexcept : mValue(src.mValue) {
-  std::cout << "Executing SpreadsheetCell Copy Constructor" << std::endl;
+  std::cout << "SpreadsheetCell Copy Constructor" << std::endl;
 }
 
 SpreadsheetCell::SpreadsheetCell(SpreadsheetCell&& rhs) noexcept {
-  std::cout << "Executing SpreadsheetCell Move Constructor" << std::endl;
+  std::cout << "START SpreadsheetCell Move Constructor; from mId=" << rhs.mId << std::endl;
+  mId = std::rand();
+  mName = std::move(rhs.mName);
   mValue = rhs.mValue;
   rhs.mValue = 0;
+  std::cout << "END SpreadsheetCell Move Constructor; to mId=" << mId << std::endl;
 }
 
-void SpreadsheetCell::setValue(double inValue)
-{
+SpreadsheetCell::~SpreadsheetCell() noexcept {
+  std::cout << "SpreadsheetCell Destructor, mId=" << mId << std::endl;
+  mValue = 0;
+}
+
+void SpreadsheetCell::setName(const std::string& name) {
+  mName = name;
+}
+
+void SpreadsheetCell::setValue(double inValue) {
   mValue = inValue;
 }
 
@@ -47,7 +61,7 @@ double SpreadsheetCell::stringToDouble(const std::string& inString) const
 
 SpreadsheetCell SpreadsheetCell::operator+(const SpreadsheetCell& rhs) const
 {
-  return SpreadsheetCell(getValue() + rhs.getValue());
+  return SpreadsheetCell(mName, getValue() + rhs.getValue());
 }
 
 SpreadsheetCell& SpreadsheetCell::operator=(const SpreadsheetCell& rhs) noexcept {
@@ -60,7 +74,7 @@ SpreadsheetCell& SpreadsheetCell::operator=(const SpreadsheetCell& rhs) noexcept
 }
 
 SpreadsheetCell& SpreadsheetCell::operator=(SpreadsheetCell&& rhs) noexcept {
-  std::cout << "Executing SpreadsheetCell Move Assignment Operator" << std::endl;
+  std::cout << "SpreadsheetCell Move Assignment Operator" << std::endl;
   if (this == &rhs) {
     return *this;
   }
