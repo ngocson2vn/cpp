@@ -72,7 +72,10 @@
         "typeindex": "cpp",
         "variant": "cpp",
         "__nullptr": "cpp",
-        "bit": "cpp"
+        "bit": "cpp",
+        "csignal": "cpp",
+        "future": "cpp",
+        "scoped_allocator": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "C_Cpp.default.compilerPath": "/usr/bin/g++",

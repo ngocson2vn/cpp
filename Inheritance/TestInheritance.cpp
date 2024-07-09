@@ -1,7 +1,11 @@
 #include "Derived.h"
 
+template <typename T>
+class TD;
+
 int main() {
   Derived myDerived;
-  Base& ref = myDerived;
-  ref.someMethod();
+  std::cout << "myDerived: " << &myDerived << std::endl;
+  myDerived.setIntValue(100);
+  myDerived.showIntValue();
 }
