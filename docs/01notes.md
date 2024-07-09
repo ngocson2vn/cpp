@@ -22,3 +22,15 @@ values to zero.
 
 # How can an user-space application call a device driver function?
 User-space app --> /dev/device file --> device driver functions
+
+# Comma Operator
+```C++
+int a = (1, 2, 3);
+```
+This is the [comma operator](http://en.wikipedia.org/wiki/Comma_operator): evaluation of `a, b` first causes `a` to be evaluated, then `b`, and the result is that of `b`.
+
+`int a = (1, 2, 3)`; first evaluates 1, then 2, finally 3, and uses that last 3 to initialise a. It is useless here, but it can be useful when the left operand of , has side effects (usually: when it's a function call).
+
+# Squiggles
+Red squiggly line:  
+<img align="left" src="./images/red_squiggly_line.png" alt="Red Squiggly Line" width="50%" />
