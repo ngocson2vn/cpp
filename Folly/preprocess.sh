@@ -5,4 +5,4 @@ cpp \
 -Ifolly/include \
 -Iopenssl/include \
 -Iboost/include \
-main.cc
+main.cc > main.cc.cpp
