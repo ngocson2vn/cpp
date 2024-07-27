@@ -134,3 +134,32 @@ build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0
 # show commands with --subcommands
 bazel build --subcommands --config=cuda --explain=explain.txt //tensorflow:libtensorflow_cc.so --verbose_failures --jobs 128
 ```
+
+# Blade
+```Bash
+# Force global dependency
+global_settler(prefer_deps=["thirdparty/tensorflow:1155nv_cuda114_sony"])
+
+Blade(warning): Global setting change branch 1.15.3-gpu-cu10.1-gcc8 --> 1155nv_cuda114_sony for thirdparty/tensorflow, depended by lagrange/operators
+Blade(warning): Global setting change branch 1.15.3-gpu --> 1155nv_cuda114_sony for thirdparty/tensorflow, depended by lagrange/operators
+Blade(warning): Global setting change branch 2.9.2-cuda11.4-cudnn8.2.4-gcc8 --> 1155nv_cuda114_sony for thirdparty/tensorflow, depended by lagrange/operators/shared_variable
+```
+
+# git shows modified files
+```Bash
+git diff --name-only
+```
+
+# vtable for __cxxabiv1::__class_type_info
+```Python
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/data00/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages/tensorflow_core/python/framework/load_library.py", line 61, in load_op_library
+    lib_handle = py_tf.TF_LoadLibrary(library_filename)
+tensorflow.python.framework.errors_impl.NotFoundError: /data00/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages/bytedance/tensorsharp/lib/libhybrid_fm_ops_ab0.so: undefined symbol: _ZTVN10__cxxabiv117__class_type_infoE
+```
+
+Solution: using `g++` instead of `gcc`  
+```Bash
+g++ -shared *.o -o libhybrid_fm_ops_ab0.so 
+```
