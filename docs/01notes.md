@@ -110,3 +110,91 @@ print(transformed_features)
 ```
 
 In this example, `age` and `income` are numerical columns, while `gender` is a categorical column that is represented as an embedding. The `DenseFeatures` layer then combines these feature columns and transforms the raw input data into a format suitable for feeding into a neural network.
+
+# Multiple glibc on a Single Linux
+ ```Bash
+pip install patchelf
+
+# First, we’ll add an rpath to our binary executable for our preferred glibc:
+patchelf --add-rpath /opt/glibc/lib python3.7
+patchelf --add-rpath /opt/glibc/lib libtensorflow_cc.so.1
+patchelf --add-rpath /opt/glibc/lib libtensorflow_framework.so.1
+
+# Similarly, we can update the rpath with the –set-rpath option. This might break the program, so use it with caution:
+patchelf --set-rpath "/path/glibc-older:/path/libsdl:/path/libgl" my_prog
+
+# To remove an existing rpath:
+patchelf --remove-rpath /path/glibc-older my_prog
+
+# We can also update the dynamic linker with —set-interpreter:
+patchelf --set-interpreter /opt/glibc/lib/ld-linux-x86-64.so.2 /data00/son.nguyen/.pyenv/versions/3.7.3/bin/python3.7
+ ```
+
+# Get rpath and set rpath
+```Bash
+readelf -d libtensorflow_cc.so.1 | head -20
+
+Dynamic section at offset 0x2b4d6a08 contains 38 entries:
+  Tag        Type                         Name/Value
+ 0x0000000000000001 (NEEDED)             Shared library: [libtensorflow_framework.so.1]
+ 0x0000000000000001 (NEEDED)             Shared library: [libpthread.so.0]
+ 0x0000000000000001 (NEEDED)             Shared library: [libdl.so.2]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [librt.so.1]
+ 0x0000000000000001 (NEEDED)             Shared library: [libstdc++.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [libgcc_s.so.1]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [ld-linux-x86-64.so.2]
+ 0x000000000000000e (SONAME)             Library soname: [libtensorflow_cc.so.1]
+ 0x000000000000001d (RUNPATH)            Library runpath: [$ORIGIN/../_solib_local/_U_S_Stensorflow_Clibtensorflow_Ucc.so.1.15.5___Utensorflow:$ORIGIN/:$ORIGIN/../../nvidia/cusparse/lib:$ORIGIN/../nvidia/cusparse/lib:$ORIGIN/../../nvidia/cublas/lib:$ORIGIN/../nvidia/cublas/lib:$ORIGIN/../../tensorrt:$ORIGIN/../tensorrt:$ORIGIN/../../nvidia/cuda_cupti/lib:$ORIGIN/../nvidia/cuda_cupti/lib:$ORIGIN/../../nvidia/cusolver/lib:$ORIGIN/../nvidia/cusolver/lib:$ORIGIN/../../nvidia/cuda_runtime/lib:$ORIGIN/../nvidia/cuda_runtime/lib]
+ 0x000000000000000c (INIT)               0x2287000
+ 0x000000000000000d (FINI)               0xb89f0f4
+ 0x0000000000000019 (INIT_ARRAY)         0x2b18d000
+ 0x000000000000001b (INIT_ARRAYSZ)       26400 (bytes)
+ 0x000000000000001a (FINI_ARRAY)         0x2b193720
+ 0x000000000000001c (FINI_ARRAYSZ)       8 (bytes)
+
+# Also
+chrpath -l libpython3.7m.so
+patchelf --print-rpath /data00/son.nguyen/.pyenv/versions/3.7.3/bin/python3.7
+
+# Add rpath
+patchelf --force-rpath --add-rpath /opt/glibc/lib /data00/son.nguyen/.pyenv/versions/3.7.3/bin/python3.7
+```
+
+# Fix rpath for python
+```Bash
+patchelf --force-rpath --add-rpath /opt/glibc/lib /data00/son.nguyen/.pyenv/versions/3.7.3/bin/python3.7
+patchelf --add-rpath /usr/lib/x86_64-linux-gnu /data00/son.nguyen/.pyenv/versions/3.7.3/bin/python3.7
+
+patchelf --force-rpath --set-rpath /data00/son.nguyen/.pyenv/versions/3.7.3/lib /data00/son.nguyen/.pyenv/versions/3.7.3/lib/libpython3.7m.so.1.0
+patchelf --force-rpath --add-rpath /usr/lib/x86_64-linux-gnu /data00/son.nguyen/.pyenv/versions/3.7.3/lib/libpython3.7m.so.1.0
+patchelf --force-rpath --add-rpath /usr/lib/x86_64-linux-gnu /data00/son.nguyen/.pyenv/versions/3.7.3/lib/libpython3.so
+
+
+patchelf --set-rpath "/data00/son.nguyen/.pyenv/versions/3.7.3/lib:/opt/glibc/lib:/usr/lib/x86_64-linux-gnu" /data00/son.nguyen/.pyenv/versions/3.7.3/bin/python3.7
+
+/usr/bin/patchelf --set-rpath /usr/lib/x86_64-linux-gnu /data00/son.nguyen/.pyenv/versions/3.7.3/bin/python3.7
+
+cd /data00/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/lib-dynload
+for solib in $(ls)
+do 
+    echo $solib
+    patchelf --force-rpath --add-rpath /usr/lib/x86_64-linux-gnu $solib
+done
+
+cd /data00/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages/tensorflow_core/python
+patchelf --force-rpath --add-rpath /usr/lib/x86_64-linux-gnu _pywrap_tensor_float_32_execution.so
+patchelf --force-rpath --add-rpath /usr/lib/x86_64-linux-gnu _pywrap_tensorflow_internal.so
+patchelf --force-rpath --add-rpath /usr/lib/x86_64-linux-gnu _tf_stack.so
+
+LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu python
+
+patchelf --force-rpath --set-rpath /usr/lib/x86_64-linux-gnu /data00/son.nguyen/.pyenv/versions/3.7.3/bin/python3.7
+readelf -d /data00/son.nguyen/.pyenv/versions/3.7.3/bin/python3.7
+readelf -d /data00/son.nguyen/.pyenv/versions/3.7.3/lib/libpython3.so
+readelf -d /data00/son.nguyen/.pyenv/versions/3.7.3/lib/libpython3.7m.so.1.0
+
+cd /usr/lib/x86_64-linux-gnu
+sudo ln -s /lib/x86_64-linux-gnu/libgcc_s.so.1 .
+```
