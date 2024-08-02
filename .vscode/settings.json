@@ -75,7 +75,13 @@
         "bit": "cpp",
         "csignal": "cpp",
         "future": "cpp",
-        "scoped_allocator": "cpp"
+        "scoped_allocator": "cpp",
+        "*.cppx": "cpp",
+        "__atomic": "cpp",
+        "__functional_base": "cpp",
+        "__functional_base_03": "cpp",
+        "__tuple": "cpp",
+        "filesystem": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "C_Cpp.default.compilerPath": "/usr/bin/g++",

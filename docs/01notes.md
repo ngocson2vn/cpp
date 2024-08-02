@@ -111,6 +111,7 @@ print(transformed_features)
 
 In this example, `age` and `income` are numerical columns, while `gender` is a categorical column that is represented as an embedding. The `DenseFeatures` layer then combines these feature columns and transforms the raw input data into a format suitable for feeding into a neural network.
 
+<<<<<<< HEAD
 # Multiple glibc on a Single Linux
  ```Bash
 pip install patchelf
@@ -198,3 +199,99 @@ readelf -d /data00/son.nguyen/.pyenv/versions/3.7.3/lib/libpython3.7m.so.1.0
 cd /usr/lib/x86_64-linux-gnu
 sudo ln -s /lib/x86_64-linux-gnu/libgcc_s.so.1 .
 ```
+
+# iTerm2
+https://iterm2colorschemes.com/
+```Bash
+# Import all color schemes
+tools/import-scheme.sh schemes/*
+```
+
+# Bazel
+```Bash
+# You can find logs in the output base for the workspace, which for Linux is typically $HOME/.cache/bazel/_bazel_$USER/<MD5 sum of workspace path>/
+
+# You can find the output base for a workspace by running bazel info output_base in that workspace. Note though that there's a command.log file which contains the output of the last command, and bazel info is itself a command, so that will overwrite command.log. You can do echo -n $(pwd) | md5sum in a bazel workspace to get the md5, or find the README files in the output base directories which say what workspace each is for.
+bazel info output_base
+
+# cxxopts
+export BAZEL_CXXOPTS="-D_GLIBCXX_USE_CXX11_ABI=0"
+
+# .bazelrc
+build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0
+
+# show commands with --subcommands
+bazel build --subcommands --config=cuda --explain=explain.txt //tensorflow:libtensorflow_cc.so --verbose_failures --jobs 128
+```
+
+# Blade
+```Bash
+# Force global dependency
+global_settler(prefer_deps=["thirdparty/tensorflow:1155nv_cuda114_sony"])
+
+Blade(warning): Global setting change branch 1.15.3-gpu-cu10.1-gcc8 --> 1155nv_cuda114_sony for thirdparty/tensorflow, depended by lagrange/operators
+Blade(warning): Global setting change branch 1.15.3-gpu --> 1155nv_cuda114_sony for thirdparty/tensorflow, depended by lagrange/operators
+Blade(warning): Global setting change branch 2.9.2-cuda11.4-cudnn8.2.4-gcc8 --> 1155nv_cuda114_sony for thirdparty/tensorflow, depended by lagrange/operators/shared_variable
+```
+
+# git shows modified files
+```Bash
+git diff --name-only
+```
+
+# vtable for __cxxabiv1::__class_type_info
+```Python
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/data00/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages/tensorflow_core/python/framework/load_library.py", line 61, in load_op_library
+    lib_handle = py_tf.TF_LoadLibrary(library_filename)
+tensorflow.python.framework.errors_impl.NotFoundError: /data00/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages/bytedance/tensorsharp/lib/libhybrid_fm_ops_ab0.so: undefined symbol: _ZTVN10__cxxabiv117__class_type_infoE
+```
+
+Solution: using `g++` instead of `gcc`  
+```Bash
+g++ -shared *.o -o libhybrid_fm_ops_ab0.so 
+```
+
+# Template Non-Deduced Context
+Given the code in [test3.cpp](../Examples/type_deduction/test3.cpp):  
+**Deduction Process**:  
+1. Template Parameters:
+- `T`: The primary template parameter, which can be deduced from the function argument.
+- `typename enable_if<uses_write_v<T>>::type`: The second template parameter, which is dependent on `T`.
+
+2. Function Call:  
+- When you call `serialize(stdout, w)` with `w` being of type `Widget`, the compiler starts by deducing `T` as `Widget`.
+
+3. Non-Deduced Context:  
+- The second template parameter `typename enable_if<uses_write_v<T>>::type` is in a non-deduced context because it is not directly connected to the function parameter list.
+- The C++ standard specifies that template parameters appearing in such positions are in non-deduced contexts.
+
+**Why the Compiler Does Not Deduce from the Function Call**  
+Non-Deduced Context Rule  
+The C++ standard N4778 specifies that certain types of template arguments are not deduced. Specifically:  
+- Nested Types: When a type is nested within another type or part of a template argument, it is often placed in a non-deduced context.
+- Dependent Types: If the type depends on another template parameter, it might not be deduced.
+
+In the original code, `typename enable_if<uses_write_v<T>>::type` is a type dependent on `T`. It is nested within `enable_if`, making it a non-deduced context. The compiler doesn't attempt to deduce it from the function call arguments because of this classification.
+
+# Template Default Arguments
+Given the code in [test1.cpp](../Examples/type_deduction/test1.cpp):  
+The default template arguments are inherited from the primary template in C++. This behavior is consistent with the C++ standard.
+
+Here’s a brief overview of how it works:
+
+1. **Primary Template Default Arguments**: If you instantiate a template without specifying all the template arguments, the compiler uses the default arguments provided in the primary template definition.
+
+2. **Specializations and Default Arguments**: When you provide a specialization for a template, if that specialization does not specify all the arguments, the compiler will use the default arguments specified in the primary template.
+
+In your specific case, `enable_if` is a template with two parameters: `bool B` and `typename X` with `X` defaulting to `int`. When you use `enable_if<true>`, the compiler:
+- Looks for a specialization of `enable_if<true>` (i.e., `enable_if<true, X>`).
+- Since `X` is not specified, the default argument `int` is used from the primary template definition.
+
+**C++ Standard Reference**:
+This behavior is described in the C++ standard under the section dealing with template arguments. Specifically:
+- **C++17 Standard [temp.arg.nontype]**: Default template arguments are used when a specific instantiation doesn’t provide them.
+- **C++20 Standard [temp.arg]**: Similarly, default arguments from the primary template are used when arguments are not explicitly provided.
+
+So, to summarize, yes, default template arguments are inherited from the primary template, and this is a standard rule in C++.
