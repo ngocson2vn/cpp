@@ -10,5 +10,6 @@ struct enable_if<true, X> {
 };
 
 int main(int argc, char** argv) {
-    typename enable_if<true>::type v;
+    typename enable_if<true>::type v = 10;
+    printf("v = %d\n", v);
 }

@@ -10,5 +10,11 @@ x3: test3.cpp
 x4: test4.cpp
 	clang++ -Xclang -ast-print -fsyntax-only test4.cpp > test4.cppx
 
+x5: test5.cpp
+	clang++ -Xclang -ast-print -fsyntax-only test5.cpp > test5.cppx
+
+t1: test1.cpp
+	clang++ -o test1 test1.cpp
+
 t2: test2.cpp
 	clang++ -o test2 test2.cpp
