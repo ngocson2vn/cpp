@@ -18,3 +18,18 @@ t1: test1.cpp
 
 t2: test2.cpp
 	clang++ -o test2 test2.cpp
+
+k1: template_keyword1.cpp
+	clang++ -o k1 template_keyword1.cpp
+
+k2: template_keyword2.cpp
+	clang++ -o k2 template_keyword2.cpp
+
+kx2: template_keyword2.cpp
+	clang++ -Xclang -ast-print -fsyntax-only template_keyword2.cpp > template_keyword2.cppx
+
+k3: typename_keyword1.cpp
+	clang++ -o k3 typename_keyword1.cpp
+
+kx3: typename_keyword2.cpp
+	clang++ -Xclang -ast-print -fsyntax-only typename_keyword2.cpp > typename_keyword2.cppx
