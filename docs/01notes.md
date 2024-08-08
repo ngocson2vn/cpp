@@ -295,3 +295,15 @@ This behavior is described in the C++ standard under the section dealing with te
 - **C++20 Standard [temp.arg]**: Similarly, default arguments from the primary template are used when arguments are not explicitly provided.
 
 So, to summarize, yes, default template arguments are inherited from the primary template, and this is a standard rule in C++.
+
+# GLIBC_PRIVATE
+```Bash
+/usr/lib/x86_64-linux-gnu/libm.so.6: symbol __strtof128_nan, version GLIBC_PRIVATE not defined in file libc.so.6 with link time reference
+```
+Reason:
+```Bash
+readelf -sW /usr/lib/x86_64-linux-gnu/libm.so.6 | grep __strtof128_nan
+     6: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __strtof128_nan@GLIBC_PRIVATE (13)
+  3240: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __strtof128_nan@@GLIBC_PRIVATE
+```
+The symbol doesn't exist in `/lib/x86_64-linux-gnu/libc.so.6`
