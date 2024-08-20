@@ -307,3 +307,39 @@ readelf -sW /usr/lib/x86_64-linux-gnu/libm.so.6 | grep __strtof128_nan
   3240: 0000000000000000     0 FUNC    GLOBAL DEFAULT  UND __strtof128_nan@@GLIBC_PRIVATE
 ```
 The symbol doesn't exist in `/lib/x86_64-linux-gnu/libc.so.6`
+
+# git auto completion
+```Bash
+sudo apt-get install git-core bash-completion
+source /usr/share/bash-completion/completions/git
+```
+
+# git fetch origin
+```Bash
+git init
+git remote add origin https://github.com/tensorflow/tensorflow.git
+git fetch origin --depth 1 6c5b4ba75d45899bb002c9ad6c8d91663b02f206
+git checkout FETCH_HEAD
+git checkout -b v1.15.3
+```
+
+# gdb displays next instruction
+```GDB
+display/i $pc
+```
+
+# symbol lookup error
+```C++
+./main: symbol lookup error: ./path/to/libX.so: undefined symbol: SYMBOL_Y
+```
+Reason: 
+- Function `f1` in `libX.so` calls function `f2` defined in `main` program.
+- But `main` was not built with `-rdynamic` or `--export-dynamic`, so `f2` was not placed in the dynamic symbol table.
+
+https://man7.org/linux/man-pages/man3/dlopen.3.html#EXAMPLES
+>Any global symbols in the executable that were placed into its dynamic symbol table by ld(1) can also be used to resolve references in a dynamically loaded shared object.  Symbols may be placed in the dynamic symbol table either because the executable was linked with the flag "-rdynamic" (or, synonymously, "--export-dynamic"), which causes all of the executable's global symbols to be placed in the dynamic symbol table, or because ld(1) noted a dependency on a symbol in another object during static linking.
+
+# Check GPU Memory Usage
+```Bash
+while true; do nvidia-smi -i 0 --query-gpu=index,gpu_name,utilization.gpu,temperature.gpu,memory.total,memory.used,memory.free --format=csv; echo; sleep 1; done
+```
