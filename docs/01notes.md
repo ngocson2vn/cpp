@@ -12,6 +12,16 @@ whatis obj
 ## Print vtable of an object
 info vtbl obj
 
+## Generate core file
+```Bash
+gdb attach $PID
+set pagination off
+set width 65536
+generate-core-file
+detach
+```
+File `core.$PID` should be created in the current working directory.
+
 # std::map
 For operator [ ], the type of the index is not the only difference from ordinary arrays. In addition,
 you can’t have a wrong index. If you use a key as the index for which no element yet exists, a new
@@ -342,4 +352,13 @@ https://man7.org/linux/man-pages/man3/dlopen.3.html#EXAMPLES
 # Check GPU Memory Usage
 ```Bash
 while true; do nvidia-smi -i 0 --query-gpu=index,gpu_name,utilization.gpu,temperature.gpu,memory.total,memory.used,memory.free --format=csv; echo; sleep 1; done
+```
+
+# TensorFlow logging
+```Bash
+# if severity > TF_CPP_MIN_LOG_LEVEL, output message
+export TF_CPP_MIN_LOG_LEVEL=0
+
+# if level < TF_CPP_MIN_VLOG_LEVEL, output message
+export TF_CPP_MIN_VLOG_LEVEL=3
 ```
