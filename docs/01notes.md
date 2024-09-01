@@ -362,3 +362,59 @@ export TF_CPP_MIN_LOG_LEVEL=0
 # if level < TF_CPP_MIN_VLOG_LEVEL, output message
 export TF_CPP_MIN_VLOG_LEVEL=3
 ```
+
+# TensorFlow Session Run Call Stack:
+```C++
+Thread 35 (LWP 39171):
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x00007f0851d7b582 in nsync::nsync_mu_semaphore_p_with_deadline(nsync::nsync_semaphore_s_*, timespec) () from ./lib/libtensorflow_cc.so.2
+#2  0x00007f0851d7ab99 in nsync::nsync_sem_wait_with_cancel_(nsync::waiter*, timespec, nsync::nsync_note_s_*) () from ./lib/libtensorflow_cc.so.2
+#3  0x00007f0851d781ab in nsync::nsync_cv_wait_with_deadline_generic(nsync::nsync_cv_s_*, void*, void (*)(void*), void (*)(void*), timespec, nsync::nsync_note_s_*) () from ./lib/libtensorflow_cc.so.2
+#4  0x00007f0851d78683 in nsync::nsync_cv_wait_with_deadline(nsync::nsync_cv_s_*, nsync::nsync_mu_s_*, timespec, nsync::nsync_note_s_*) () from ./lib/libtensorflow_cc.so.2
+#5  0x00007f0851212a3c in tensorflow::DirectSession::WaitForNotification(tensorflow::Notification*, long) () from ./lib/libtensorflow_cc.so.2
+#6  0x00007f0851212efd in tensorflow::DirectSession::WaitForNotification(tensorflow::Notification*, tensorflow::DirectSession::RunState*, tensorflow::CancellationManager*, long) () from ./lib/libtensorflow_cc.so.2
+#7  0x00007f085122213e in tensorflow::DirectSession::RunInternal(long, tensorflow::RunOptions const&, tensorflow::CallFrameInterface*, tensorflow::DirectSession::ExecutorsAndKeys*, tensorflow::RunMetadata*, tensorflow::thread::ThreadPoolOptions const&) () from ./lib/libtensorflow_cc.so.2
+#8  0x00007f08512242e7 in tensorflow::DirectSession::Run(tensorflow::RunOptions const&, std::vector<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, tensorflow::Tensor>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, tensorflow::Tensor> > > const&, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&, std::vector<tensorflow::Tensor, std::allocator<tensorflow::Tensor> >*, tensorflow::RunMetadata*, tensorflow::thread::ThreadPoolOptions const&) () from ./lib/libtensorflow_cc.so.2
+#9  0x00007f0851211833 in tensorflow::DirectSession::Run(tensorflow::RunOptions const&, std::vector<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, tensorflow::Tensor>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, tensorflow::Tensor> > > const&, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&, std::vector<tensorflow::Tensor, std::allocator<tensorflow::Tensor> >*, tensorflow::RunMetadata*) () from ./lib/libtensorflow_cc.so.2
+#10 0x00007f085122158f in tensorflow::DirectSession::Run(std::vector<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, tensorflow::Tensor>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, tensorflow::Tensor> > > const&, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&, std::vector<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::allocator<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > const&, std::vector<tensorflow::Tensor, std::allocator<tensorflow::Tensor> >*) () from ./lib/libtensorflow_cc.so.2
+#11 0x00000000033d6dcd in main::$_0::operator() (this=0x59300f0, i=3) at run_pet_model/main.cpp:194
+#12 0x00000000033d6d01 in std::__invoke_impl<int, main::$_0, int> (__f=..., __args=@0x59300e8: 3) at /opt/path/to/gccs/x86_64-x86_64-gcc-830/lib/gcc/x86_64-linux-gnu/8.3.0/../../../../include/c++/8.3.0/bits/invoke.h:60
+#13 0x00000000033d6c52 in std::__invoke<main::$_0, int> (__fn=..., __args=@0x59300e8: 3) at /opt/path/to/gccs/x86_64-x86_64-gcc-830/lib/gcc/x86_64-linux-gnu/8.3.0/../../../../include/c++/8.3.0/bits/invoke.h:95
+#14 0x00000000033d6c15 in std::thread::_Invoker<std::tuple<main::$_0, int> >::_M_invoke<0ul, 1ul> (this=0x59300e8) at /opt/path/to/gccs/x86_64-x86_64-gcc-830/lib/gcc/x86_64-linux-gnu/8.3.0/../../../../include/c++/8.3.0/thread:244
+#15 0x00000000033d6bc5 in std::thread::_Invoker<std::tuple<main::$_0, int> >::operator() (this=0x59300e8) at /opt/path/to/gccs/x86_64-x86_64-gcc-830/lib/gcc/x86_64-linux-gnu/8.3.0/../../../../include/c++/8.3.0/thread:253
+#16 0x00000000033d6a4e in std::thread::_State_impl<std::thread::_Invoker<std::tuple<main::$_0, int> > >::_M_run (this=0x59300e0) at /opt/path/to/gccs/x86_64-x86_64-gcc-830/lib/gcc/x86_64-linux-gnu/8.3.0/../../../../include/c++/8.3.0/thread:196
+#17 0x00007f077a1aabff in std::execute_native_thread_routine (__p=0x59300e0) at ../../../.././libstdc++-v3/src/c++11/thread.cc:80
+#18 0x00007f077a683ca9 in start_thread (arg=0x7f066e7fc000) at pthread_create.c:486
+#19 0x00007f07791ea76f in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:95
+```
+
+# TensorFlow GraphDef Manipulation
+## Add a new node to Graph
+```Python
+with tf.Session() as sess:
+  graph = tf.get_default_graph()
+  graph_def = graph.as_graph_def()
+  graph_pbtxt_path = graph_file_path + "txt"
+  graph_writer = open(graph_pbtxt_path, "w")
+  stupid_node_def = tf.NodeDef()
+  stupid_node_def.name = "X"
+  stupid_node_def.op = "Stupid"
+  stupid_node_def.input.append("matrixA")
+  stupid_node_def.attr["T"].CopyFrom(tf.AttrValue(type=dtypes.as_dtype(tf.float32).as_datatype_enum))
+  graph_def.node.append(stupid_node_def)
+  graph_writer.write(str(graph_def))
+  graph_writer.close()
+  print(graph_pbtxt_path)
+```
+
+## Modify an existing node
+```Python
+  graph = tf.get_default_graph()
+  graph_def = graph.as_graph_def()
+  for node in graph_def.node:
+    if node.name == "matrixB":
+      new_value = tf.AttrValue()
+      new_value.CopyFrom(node.attr["value"])
+      new_value.tensor.tensor_shape.CopyFrom(tf.TensorShape([5, 5]).as_proto())
+      node.attr["value"].CopyFrom(new_value)
+```
