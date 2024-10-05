@@ -255,7 +255,7 @@ Traceback (most recent call last):
   File "<stdin>", line 1, in <module>
   File "/data00/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages/tensorflow_core/python/framework/load_library.py", line 61, in load_op_library
     lib_handle = py_tf.TF_LoadLibrary(library_filename)
-tensorflow.python.framework.errors_impl.NotFoundError: /data00/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages/bytedance/tensorsharp/lib/libhybrid_fm_ops_ab0.so: undefined symbol: _ZTVN10__cxxabiv117__class_type_infoE
+tensorflow.python.framework.errors_impl.NotFoundError: /data00/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages/sony/tensorsharp/lib/libhybrid_fm_ops_ab0.so: undefined symbol: _ZTVN10__cxxabiv117__class_type_infoE
 ```
 
 Solution: using `g++` instead of `gcc`  
@@ -417,4 +417,27 @@ with tf.Session() as sess:
       new_value.CopyFrom(node.attr["value"])
       new_value.tensor.tensor_shape.CopyFrom(tf.TensorShape([5, 5]).as_proto())
       node.attr["value"].CopyFrom(new_value)
+```
+
+# clang format
+```Bash
+sudo apt install clang-format
+```
+
+# union
+In C++, a union is a user-defined datatype in which we can define members of different types of data types just like structures. But one thing that makes it different from structures is that the member variables in a union share the same memory location, unlike a structure that allocates memory separately for each member variable. The size of the union is equal to the size of the largest data type.
+
+Memory space can be used by one member variable at one point in time, which means if we assign value to one member variable, it will automatically deallocate the other member variable stored in the memory which will lead to loss of data.
+
+# binary/bit format
+```Python
+n = 4
+print("{0:08b}".format(n))
+
+```
+
+# git merge multiple commits
+```Bash
+git reset --soft xxxxx
+git commit --amend
 ```
