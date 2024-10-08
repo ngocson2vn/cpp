@@ -441,3 +441,31 @@ print("{0:08b}".format(n))
 git reset --soft xxxxx
 git commit --amend
 ```
+
+# OpenSSL
+Could not build the ssl module!
+Python requires an OpenSSL 1.0.2 or 1.1 compatible libssl with X509_VERIFY_PARAM_set1_host().
+
+```Bash
+wget https://www.openssl.org/source/openssl-1.0.2.tar.gz
+tar -xzf openssl-1.0.2.tar.gz
+cd openssl-1.0.2
+./config --prefix=/usr
+make && sudo make install
+
+yes | cp -vrf /usr/lib64/libcrypto.so.1.0.0 /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0
+yes | cp -vrf /usr/lib64/libssl.so.1.0.0 /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0
+cd /usr/lib/x86_64-linux-gnu
+ln -sf libcrypto.so.1.0.0 libcrypto.so
+ln -sf libssl.so.1.0.0 libssl.so
+
+# Verify
+pyenv global 3.9.0
+python
+Python 3.9.0 (default, Oct  8 2024, 03:46:07) 
+[GCC 8.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import ssl
+>>> ssl.OPENSSL_VERSION
+'OpenSSL 1.0.2o  27 Mar 2018'
+```

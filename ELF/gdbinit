@@ -1,0 +1,18 @@
+set pagination off
+
+define ni
+  nexti
+  disassemble $pc-40,$pc+30
+end
+
+define la
+  set $offset = 30
+  if $argc == 1
+    set $offset = $arg0
+  end
+  disassemble $pc-$offset,$pc+$offset
+end
+
+define px
+  p/x $arg0
+end
