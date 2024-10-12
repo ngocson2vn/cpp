@@ -469,3 +469,8 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> ssl.OPENSSL_VERSION
 'OpenSSL 1.0.2o  27 Mar 2018'
 ```
+
+# DWARF debug info
+```Bash
+dwarfdump -ls output/bin/main | grep source_file_name.cc
+```
