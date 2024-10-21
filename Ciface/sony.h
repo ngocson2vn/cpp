@@ -1,0 +1,3 @@
+namespace sony {
+  void play();
+}
