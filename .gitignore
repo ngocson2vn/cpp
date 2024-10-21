@@ -2,5 +2,7 @@
 .vscode/vc.db*
 *.dSYM
 *.o
+*.so
 Folly/folly/
 *.cppx
+*/main

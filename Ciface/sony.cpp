@@ -1,25 +1,34 @@
 #include "sony.h"
 #include <string>
-#include <dlfcn.h>
 #include <iostream>
 
-static constexpr char kTargetFuncName[] = "_sony_tf_set_error_message";
+#define EXPORT_CIFACE __attribute__((visibility("default")))
 
-typedef void (*ciface)(const char* error_message);
+static std::function<void(void)> custom_abort_handle;
+
+static std::string _last_tf_error;
+
+extern "C" {
+  EXPORT_CIFACE const char* _tf_get_last_error_message() {
+    return _last_tf_error.c_str();
+  }
+}
 
 namespace {
-  void publish_error(const std::string error) {
-    void* func_ptr = dlsym(RTLD_DEFAULT, kTargetFuncName);
-    if (func_ptr) {
-      std::cout << "Found ciface " << func_ptr << std::endl;
-      reinterpret_cast<ciface>(func_ptr)(error.c_str());
-    }
+  void store_error(const std::string& error) {
+    _last_tf_error = error;
   }
 }
 
 namespace sony {
+  void register_abort_handler(std::function<void(void)> abort_handler) {
+    custom_abort_handle = abort_handler;
+  }
+
   void play() {
-    std::string error = "Internal error!";
-    publish_error(error);
+    std::string error = "Sony internal error!";
+    store_error(error);
+    custom_abort_handle();
+    std::abort();
   }
 }
