@@ -472,5 +472,6 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 # DWARF debug info
 ```Bash
+sudo apt install -y dwarfdump
 dwarfdump -ls output/bin/main | grep source_file_name.cc
 ```
