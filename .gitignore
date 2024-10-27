@@ -6,3 +6,4 @@
 Folly/folly/
 *.cppx
 */main
+*/*/main

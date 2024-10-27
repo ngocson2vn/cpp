@@ -232,6 +232,7 @@ build --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0
 
 # show commands with --subcommands
 bazel build --subcommands --config=cuda --explain=explain.txt //tensorflow:libtensorflow_cc.so --verbose_failures --jobs 128
+# Commands will be logged in build/0a31f298a9820565a8a30548380f28ee/command.log
 ```
 
 # Blade
