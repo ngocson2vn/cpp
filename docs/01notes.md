@@ -244,11 +244,6 @@ Blade(warning): Global setting change branch 1.15.3-gpu --> 1155nv_cuda114_sony 
 Blade(warning): Global setting change branch 2.9.2-cuda11.4-cudnn8.2.4-gcc8 --> 1155nv_cuda114_sony for thirdparty/tensorflow, depended by lagrange/operators/shared_variable
 ```
 
-# git shows modified files
-```Bash
-git diff --name-only
-```
-
 # vtable for __cxxabiv1::__class_type_info
 ```Python
 Traceback (most recent call last):
@@ -318,20 +313,6 @@ readelf -sW /usr/lib/x86_64-linux-gnu/libm.so.6 | grep __strtof128_nan
 ```
 The symbol doesn't exist in `/lib/x86_64-linux-gnu/libc.so.6`
 
-# git auto completion
-```Bash
-sudo apt-get install git-core bash-completion
-source /usr/share/bash-completion/completions/git
-```
-
-# git fetch origin
-```Bash
-git init
-git remote add origin https://github.com/tensorflow/tensorflow.git
-git fetch origin --depth 1 6c5b4ba75d45899bb002c9ad6c8d91663b02f206
-git checkout FETCH_HEAD
-git checkout -b v1.15.3
-```
 
 # gdb displays next instruction
 ```GDB
@@ -434,12 +415,6 @@ Memory space can be used by one member variable at one point in time, which mean
 n = 4
 print("{0:08b}".format(n))
 
-```
-
-# git merge multiple commits
-```Bash
-git reset --soft xxxxx
-git commit --amend
 ```
 
 # OpenSSL
