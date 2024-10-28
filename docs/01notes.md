@@ -451,3 +451,9 @@ Type "help", "copyright", "credits" or "license" for more information.
 sudo apt install -y dwarfdump
 dwarfdump -ls output/bin/main | grep source_file_name.cc
 ```
+
+# Jupyter Notebook
+```Bash
+pip install jupyter
+jupyter notebook --port=8080
+```
