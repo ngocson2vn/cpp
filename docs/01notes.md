@@ -454,8 +454,6 @@ dwarfdump -ls output/bin/main | grep source_file_name.cc
 
 # Get cudnn version
 ```Bash
-cd /opt/tiger/pilot_gpu_service_bin
-
 cat <<EOF > main.c
 #include <stdio.h>
 
@@ -494,3 +492,10 @@ EOF
 
 gcc -Wl,-rpath=./lib -Wl,--dynamic-linker=./lib/ld-linux-x86-64.so.2 main.c ./lib/libdl.so.2 ./lib/libc.so.6 ./lib/ld-linux-x86-64.so.2 -o main
 ```
+
+# Jupyter Notebook
+```Bash
+pip install jupyter
+jupyter notebook --port=8080
+```
+
