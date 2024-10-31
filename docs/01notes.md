@@ -451,3 +451,46 @@ Type "help", "copyright", "credits" or "license" for more information.
 sudo apt install -y dwarfdump
 dwarfdump -ls output/bin/main | grep source_file_name.cc
 ```
+
+# Get cudnn version
+```Bash
+cd /opt/tiger/pilot_gpu_service_bin
+
+cat <<EOF > main.c
+#include <stdio.h>
+
+size_t cudnnGetVersion();
+
+int main(int argc, char** argv) {
+  printf("CUDNN_VERSION: %ld\n", cudnnGetVersion());
+}
+EOF
+
+gcc -Wl,-rpath=./lib -Wl,--dynamic-linker=./lib/ld-linux-x86-64.so.2 main.c ./lib/libcudnn.so.8 ./lib/libc.so.6 ./lib/ld-linux-x86-64.so.2 -o main
+
+./main
+```
+
+
+Or
+```Bash
+cat <<EOF > main.c
+#include <stdio.h>
+#include <dlfcn.h>
+
+typedef size_t (*func)();
+
+int main(int argc, char** argv) {
+  void* handle = dlopen("./lib/libcudnn.so.8", RTLD_NOW | RTLD_GLOBAL);
+  if (!handle) {
+    fprintf(stderr, "ERROR: %s\n", dlerror());
+    return 1;
+  }
+  
+  void* func_ptr = dlsym(handle, "cudnnGetVersion");
+  printf("CUDNN_VERSION: %ld\n", reinterpret_cast<func>(func_ptr)());
+}
+EOF
+
+gcc -Wl,-rpath=./lib -Wl,--dynamic-linker=./lib/ld-linux-x86-64.so.2 main.c ./lib/libdl.so.2 ./lib/libc.so.6 ./lib/ld-linux-x86-64.so.2 -o main
+```

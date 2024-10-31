@@ -33,3 +33,6 @@ k3: typename_keyword1.cpp
 
 kx3: typename_keyword2.cpp
 	clang++ -Xclang -ast-print -fsyntax-only typename_keyword2.cpp > typename_keyword2.cppx
+
+test6: test6.cpp
+	clang++ -Xclang -ast-print -fsyntax-only test6.cpp > test6.cppx

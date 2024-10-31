@@ -16,3 +16,8 @@ end
 ```
 x: Hex format  
 g: Giant words (eight bytes).
+
+## List functions
+```Bash
+info functions xxx
+```
