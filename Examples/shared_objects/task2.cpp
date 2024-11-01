@@ -1,8 +1,15 @@
 #include "task2.h"
 
-static Task1 task1;
+Task2::Task2() {
+  std::cout << "Construct Task2" << std::endl;
+}
+
+void Task2::perform() {
+  std::cout << "Perform Task2" << std::endl;
+}
 
 void perform() {
-  // task1.perform();
+  Task1 task1;
+  task1.perform();
   std::cout << "Perform Task2" << std::endl;
 }
