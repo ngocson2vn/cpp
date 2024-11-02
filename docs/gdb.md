@@ -21,3 +21,11 @@ g: Giant words (eight bytes).
 ```Bash
 info functions xxx
 ```
+
+# Pretty print
+https://github.com/Microsoft/vscode-cpptools/issues/1414
+https://sourceware.org/gdb/wiki/STLSupport
+
+sudo apt install subversion -y
+cd /data00/home/son.nguyen/workspace/tools/python
+svn co svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/python

@@ -499,3 +499,16 @@ pip install jupyter
 jupyter notebook --port=8080
 ```
 
+# Macro
+```C++
+#define f(a,b) a##b
+#define g(a) #a
+#define h(a) g(a)
+```
+An argument is macro-replaced before it is substituted into the replacement list, except where it appears as the operand of # (stringize) or ## (concatenate).
+
+`h(f(1,2))`:  
+In your macro h, the parameter a is not an argument of one of those two operators, so the argument is macro-replaced and then substitued into the replacement list. That is, the argument f(1,2) is macro replaced to become 1##2, and then to 12, and then it is substituted into g(12), which is (again) macro-replaced to become "12".
+
+`g(f(1,2))`: 
+When you invoke g directly, the parameter a is an argument of the # operator, so its argument is not macro-replaced before subsitution: f(1,2) is substituted directly into the replacement list, yielding "f(1,2)".
