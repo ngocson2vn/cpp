@@ -528,3 +528,52 @@ Finally, we got:
 ```C++
 #pragma message("__CUDA_ARCH__: " "90" ", __CUDA_ARCH_FEAT_SM90_ALL is defined")
 ```
+<br/>
+
+# enum
+In C++, whether you can use an enum member directly without the enum's name scope depends on the type of enum you are using: **unscoped (traditional) enums** or **scoped enums**.
+
+### 1. **Unscoped Enum** (C++98 style)
+
+An **unscoped enum** is declared with the `enum` keyword, without `class` or `struct`. In this case, the enum members are injected into the surrounding scope, so you can use them directly without the enum name as a qualifier.
+
+#### Example:
+```cpp
+enum Color {
+    Red,    // Can be accessed as Red
+    Green,  // Can be accessed as Green
+    Blue    // Can be accessed as Blue
+};
+
+int main() {
+    Color myColor = Red; // No need to qualify with Color::
+    return 0;
+}
+```
+
+Here, `Red`, `Green`, and `Blue` are accessible directly without the `Color::` prefix because they are placed directly in the surrounding scope. This can lead to name conflicts if other enums or variables share the same names.
+
+### 2. **Scoped Enum** (C++11 and newer)
+
+A **scoped enum** is declared with `enum class` or `enum struct`. In this case, the enum members are **not** injected into the surrounding scope, so you must qualify them with the enum name.
+
+#### Example:
+```cpp
+enum class Color {
+    Red,    // Must be accessed as Color::Red
+    Green,  // Must be accessed as Color::Green
+    Blue    // Must be accessed as Color::Blue
+};
+
+int main() {
+    Color myColor = Color::Red; // Must use Color:: prefix
+    return 0;
+}
+```
+
+Here, `Red`, `Green`, and `Blue` can only be accessed as `Color::Red`, `Color::Green`, and `Color::Blue`. Scoped enums provide better type safety and prevent naming conflicts, as the enum members are not accessible outside the enum's scope.
+
+### Summary
+
+- **Unscoped Enums**: Members are injected into the surrounding scope and can be accessed without the enum name, but this may lead to naming conflicts.
+- **Scoped Enums**: Members are not injected into the surrounding scope and must be accessed with the enum name as a prefix, ensuring better type safety and avoiding conflicts.
