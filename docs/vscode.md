@@ -32,3 +32,7 @@ For example,
 
 ## Step 2: Fix all errors in `PROBLEMS` tab
 Ref: 
+
+## Step 3: Double-check
+IntelliSense should show suggestions as follows:
+![IntelliSense](./images/intelli_sense.png)

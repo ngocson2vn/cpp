@@ -577,3 +577,95 @@ Here, `Red`, `Green`, and `Blue` can only be accessed as `Color::Red`, `Color::G
 
 - **Unscoped Enums**: Members are injected into the surrounding scope and can be accessed without the enum name, but this may lead to naming conflicts.
 - **Scoped Enums**: Members are not injected into the surrounding scope and must be accessed with the enum name as a prefix, ensuring better type safety and avoiding conflicts.
+<br/><br/>
+
+
+# CV-qualifiers
+**CV-qualifiers** in C++ refer to the type qualifiers `const` and `volatile`, which modify a type to specify constraints on how objects of that type can be used. The name "cv-qualifiers" comes from the initials of `const` and `volatile`. These qualifiers are a critical part of C++'s type system and are used to enforce rules about mutability and access.
+
+### Types of CV-Qualifiers
+
+1. **`const` (Constant Qualifier)**:
+   - Indicates that the object cannot be modified after it is initialized.
+   - Attempts to modify a `const` object result in a compile-time error.
+   - Example:
+     ```cpp
+     const int x = 10; // x cannot be modified
+     // x = 20; // Error: assignment of read-only variable 'x'
+     ```
+
+2. **`volatile` (Volatile Qualifier)**:
+   - Indicates that the value of the object may be changed at any time, outside the control of the current code (e.g., by hardware or another thread).
+   - Prevents the compiler from optimizing out reads or writes to the variable.
+   - Example:
+     ```cpp
+     volatile int flag = 0;
+     while (flag == 0) {
+         // Do something
+     }
+     // The compiler will not optimize this loop
+     ```
+
+3. **`const volatile`**:
+   - Combines `const` and `volatile`, meaning the object cannot be modified directly by the code, but it might change unexpectedly (e.g., a read-only hardware register).
+   - Example:
+     ```cpp
+     const volatile int status = 0xFF;
+     int currentStatus = status; // Allowed
+     // status = 0; // Error: cannot modify a const variable
+     ```
+
+---
+
+### Application of CV-Qualifiers
+
+CV-qualifiers can apply to various types of entities, such as:
+1. **Variables**:
+   - Define variables that are constant, volatile, or both.
+
+2. **Pointers**:
+   - CV-qualifiers can be applied to the pointer itself or the data it points to:
+     ```cpp
+     const int *ptr1;      // Pointer to constant integer
+     int *const ptr2;      // Constant pointer to an integer
+     const int *const ptr3; // Constant pointer to a constant integer
+     volatile int *ptr4;   // Pointer to a volatile integer
+     ```
+
+3. **Member Functions**:
+   - When applied to member functions, `const` means the function cannot modify the object it is called on.
+   - `volatile` means the function can be called on `volatile` objects.
+     ```cpp
+     class MyClass {
+     public:
+         void foo() const;       // Can't modify `*this`
+         void bar() volatile;    // Can be called on volatile objects
+         void baz() const volatile; // Both constraints apply
+     };
+     ```
+
+4. **Function Parameters and Return Types**:
+   - CV-qualifiers can be used to specify that function arguments or return values are constant or volatile.
+
+---
+
+### CV-Qualifier Rules
+1. **Top-Level CV-Qualifiers**:
+   - Apply directly to the variable or object itself.
+   - Ignored when copying the variable by value.
+     ```cpp
+     const int a = 10;
+     int b = a; // Allowed: `b` is not const
+     ```
+
+2. **Low-Level CV-Qualifiers**:
+   - Apply to the type being pointed to (not the pointer itself).
+   - These qualifiers are preserved during assignments or conversions involving pointers.
+     ```cpp
+     const int x = 5;
+     const int *p = &x;   // Pointer to a constant integer
+     int *q = p;          // Error: cannot convert `const int*` to `int*`
+     ```
+
+### Summary
+CV-qualifiers (`const` and `volatile`) are essential tools for controlling the behavior and safety of variables and objects in C++. They allow you to declare immutability, handle special hardware scenarios, and enable proper optimization while enforcing type safety.
