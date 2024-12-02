@@ -36,3 +36,12 @@ Ref:
 ## Step 3: Double-check
 IntelliSense should show suggestions as follows:
 ![IntelliSense](./images/intelli_sense.png)
+
+
+## Python
+setting.json
+```
+  "python.analysis.extraPaths": [
+      "/data00/home/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages"
+  ],
+```

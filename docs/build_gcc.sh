@@ -11,7 +11,7 @@ find -name \*.tar.\* -delete
 
 ./contrib/download_prerequisites
 ./configure --disable-multilib --prefix=/usr
-make -j 96 && make install
+make -j `nproc` && make install
 
 
 # 8.3.5
@@ -21,11 +21,16 @@ wget http://ftp.tsukuba.wide.ad.jp/software/gcc/releases/gcc-8.5.0/gcc-8.5.0.tar
 wget http://ftp.tsukuba.wide.ad.jp/software/gcc/releases/gcc-9.5.0/gcc-9.5.0.tar.gz
 
 # 10.1.0
-wget http://ftp.tsukuba.wide.ad.jp/software/gcc/releases/gcc-9.5.0/gcc-10.1.0.tar.gz
+wget http://ftp.tsukuba.wide.ad.jp/software/gcc/releases/gcc-10.1.0/gcc-10.1.0.tar.gz
+tar -xf gcc-10.1.0.tar.gz
+cd gcc-10.1.0
+./contrib/download_prerequisites
+./configure --disable-multilib --prefix=/usr
+make -j `nproc` && make install
 
 # Create symlinks
 ls -l /usr/lib64/libstdc++.so.6.0.28
-cp -v /usr/lib64/libstdc++.so.6.0.28 /lib/x86_64-linux-gnu/
+sudo cp -v /usr/lib64/libstdc++.so.6.0.28 /lib/x86_64-linux-gnu/
 cd /lib/x86_64-linux-gnu/
-ln -sf libstdc++.so.6.0.28 libstdc++.so.6
+sudo ln -sf libstdc++.so.6.0.28 libstdc++.so.6
 
