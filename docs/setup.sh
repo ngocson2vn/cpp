@@ -15,3 +15,11 @@ libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-d
 
 pyenv install 3.7.3
 pyenv global 3.7.3
+
+##########################################################################################
+# clang
+##########################################################################################
+wget https://apt.llvm.org/llvm.sh
+chmod u+x llvm.sh
+sudo apt install -y lsb-release wget software-properties-common gnupg
+sudo ./llvm.sh 17
