@@ -616,3 +616,13 @@ CV-qualifiers (`const` and `volatile`) are essential tools for controlling the b
 /usr/bin/gcc @bazel-out/k8-opt/bin/stablehlo_compiler-2.params
 ```
 Arguments are in the file `bazel-out/k8-opt/bin/stablehlo_compiler-2.params`
+
+# Make a constexpr function run at runtime
+By wrapping it by a non-constexpr function, we can force the constexpr function run at runtime. For example,
+```C++
+  template<typename A, typename O, typename B>
+  auto get_layout_a(const ComposedLayout<A, O, B>& layout) {
+    return layout.layout_a();
+  }
+```
+where, `layout_a()` is a constexpr function.

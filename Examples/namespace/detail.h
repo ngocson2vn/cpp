@@ -17,5 +17,6 @@ class Foo {
   }
 };
 
-}
-}
+} // namespace detail
+
+} // namespace sony

@@ -94,7 +94,10 @@
         "charconv": "cpp",
         "execution": "cpp",
         "ios": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "*.ipp": "cpp",
+        "__atomic_derived": "cpp",
+        "__atomic_generated": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "C_Cpp.default.compilerPath": "/usr/bin/g++",
