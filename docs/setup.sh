@@ -23,3 +23,13 @@ wget https://apt.llvm.org/llvm.sh
 chmod u+x llvm.sh
 sudo apt install -y lsb-release wget software-properties-common gnupg
 sudo ./llvm.sh 17
+
+##########################################################################################
+# latex
+##########################################################################################
+sudo apt update
+sudo apt upgrade # Sometimes, we must upgrade all packages
+sudo apt install -y texlive-full
+
+# compile a latex file
+pdflatex layout.tex
