@@ -626,3 +626,261 @@ By wrapping it by a non-constexpr function, we can force the constexpr function 
   }
 ```
 where, `layout_a()` is a constexpr function.
+
+# ADL - Argument-Dependent Lookup
+https://en.cppreference.com/w/cpp/language/adl
+
+
+# Type of an object
+In C++, the type of an object is **not stored at runtime by the compiler**. Instead, the type information is determined entirely at compile time for most use cases. Here's how it works:
+
+### 1. **Compile-time Storage (Symbol Table)**:
+   - During compilation, the compiler keeps a **symbol table** that maps each identifier (e.g., variable or function name) to its type, scope, and other metadata.
+   - This information is used for type checking, function overloading, template instantiation, and other compile-time operations.
+   - Once the program is compiled into machine code, type information is typically **not included in the binary** unless required for specific features (e.g., polymorphism).  
+   For example:
+     ```cpp
+     int x = 10;
+     double y = 3.14;
+     ```
+     In the symbol table:
+     ```
+     Identifier   Type      Scope    Attributes
+     x            int       global   -
+     y            double    global   -
+     ```
+
+### 2. **Runtime Type Information (RTTI)**:
+   - For polymorphic types (i.e., classes with at least one virtual function), the compiler generates a **vtable** (virtual table) and attaches it to objects of the class at runtime. The vtable contains a pointer to the type information structure.
+   - This is used for features like `dynamic_cast` and `typeid` in polymorphic scenarios.
+   - The type information is stored in a metadata structure, usually as part of the vtable mechanism, but this only applies to polymorphic types.
+
+### 3. **Non-polymorphic Types**:
+   - For non-polymorphic types (e.g., structs, plain old data types, and classes without virtual functions), type information is completely resolved at compile time. The runtime system has no concept of their type, as only raw memory and machine instructions remain.
+
+### Summary:
+- The **type of an object** is primarily used at **compile time** for correctness and optimization.
+- At runtime, type information exists only for **polymorphic types** through RTTI and vtables.
+- For other types, the compiler does not store or provide type information at runtime. It is your responsibility as a programmer to ensure type safety in such cases.
+<br/><br/>
+
+# static_cast
+### Overview of `static_cast` in C++
+`static_cast` is a C++ casting operator that provides a way to perform **type-safe conversions** at compile time. It is used for conversions that the compiler can verify are valid during compilation.
+
+Unlike `reinterpret_cast`, which simply changes the way memory is interpreted, `static_cast` performs stricter checks, ensuring that the conversion is semantically meaningful and safe in the context of the type system.
+
+---
+
+### Key Characteristics of `static_cast`
+1. **Compile-Time Cast**:
+   - All checks for validity happen at compile time, and no runtime overhead is involved.
+   
+2. **Type-Safe (Within Limits)**:
+   - Only allows conversions between compatible types.
+   - For example, `int` to `float`, `void*` to another pointer type, or between related classes in an inheritance hierarchy.
+
+3. **Restrictions**:
+   - Cannot cast between completely unrelated types.
+   - No runtime type-checking like `dynamic_cast` for polymorphic types.
+
+4. **Usage**:
+   - Safer than `reinterpret_cast` for many use cases but less flexible.
+
+---
+
+### Syntax
+```cpp
+static_cast<new_type>(expression)
+```
+- `new_type`: The type you want to cast to.
+- `expression`: The value or object to be cast.
+
+---
+
+### How It Works Step by Step
+
+1. **Parsing and Validation**:
+   - The compiler analyzes the cast to determine if it’s valid.
+   - For instance:
+     - Converting between numeric types (e.g., `int` to `float`).
+     - Upcasting or downcasting in an inheritance hierarchy.
+     - Casting `void*` to a specific pointer type.
+
+2. **Compile-Time Checks**:
+   - The compiler verifies that:
+     - The conversion is defined by the C++ standard.
+     - The types are compatible (e.g., related classes, numeric types, or void pointers).
+
+3. **Code Generation**:
+   - If the cast is valid, the compiler generates appropriate machine instructions to perform the conversion (if needed).
+   - In some cases (e.g., pointer conversions), no actual instructions are generated, and the compiler just interprets the value differently.
+
+---
+
+### Concrete Examples
+
+#### Example 1: Numeric Conversions
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    int x = 10;
+    double y = static_cast<double>(x); // Convert int to double
+
+    cout << "x (int): " << x << endl;
+    cout << "y (double): " << y << endl;
+
+    return 0;
+}
+```
+**How It Works**:
+- The compiler generates instructions to convert the integer value `x` to a double.
+- This involves widening the value (adding extra precision).
+
+---
+
+#### Example 2: Upcasting in an Inheritance Hierarchy
+```cpp
+#include <iostream>
+using namespace std;
+
+class Base {
+public:
+    virtual void show() { cout << "Base class" << endl; }
+};
+
+class Derived : public Base {
+public:
+    void show() override { cout << "Derived class" << endl; }
+};
+
+int main() {
+    Derived d;
+    Base* b = static_cast<Base*>(&d); // Upcasting: Derived* -> Base*
+    b->show();
+
+    return 0;
+}
+```
+**How It Works**:
+- The `static_cast` allows safe conversion from `Derived*` to `Base*` (upcasting).
+- Since `Derived` is derived from `Base`, the compiler verifies the relationship and generates no additional runtime checks.
+
+---
+
+#### Example 3: Downcasting in an Inheritance Hierarchy
+```cpp
+#include <iostream>
+using namespace std;
+
+class Base {
+public:
+    virtual void show() { cout << "Base class" << endl; }
+};
+
+class Derived : public Base {
+public:
+    void show() override { cout << "Derived class" << endl; }
+};
+
+int main() {
+    Base b;
+    Derived* d = static_cast<Derived*>(&b); // Unsafe downcasting!
+    d->show(); // Undefined behavior
+
+    return 0;
+}
+```
+**How It Works**:
+- The `static_cast` forces a conversion from `Base*` to `Derived*` (downcasting).
+- The compiler trusts the programmer but does not insert runtime checks.
+- If the object is not actually a `Derived`, accessing members of `Derived` leads to **undefined behavior**.
+
+---
+
+#### Example 4: Casting `void*` to a Specific Type
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    int x = 42;
+    void* ptr = &x; // Generic void pointer
+    int* intPtr = static_cast<int*>(ptr); // Cast back to int*
+
+    cout << "Value: " << *intPtr << endl;
+
+    return 0;
+}
+```
+**How It Works**:
+- `static_cast` converts the generic `void*` pointer back to its original type `int*`.
+- The compiler assumes the cast is correct and generates no additional runtime checks.
+
+---
+
+#### Example 5: Prohibited Casts
+```cpp
+#include <iostream>
+using namespace std;
+
+class A {};
+class B {};
+
+int main() {
+    A a;
+    // B* b = static_cast<B*>(&a); // Error: No relationship between A and B
+
+    return 0;
+}
+```
+**Why It Fails**:
+- The compiler rejects this cast because `A` and `B` are unrelated types, and there’s no meaningful way to perform the conversion.
+
+---
+
+### Behind the Scenes
+
+1. **Pointer Adjustments** (for Inheritance):
+   - If casting between base and derived class pointers, the compiler adjusts the pointer to account for the offset between the base and derived class in memory.
+   - Example:
+     ```cpp
+     struct Base { int x; };
+     struct Derived : Base { int y; };
+
+     Derived d;
+     Base* b = static_cast<Base*>(&d);
+     ```
+     Here, `b` points to the `Base` portion of `d`, and the compiler adjusts the pointer accordingly.
+
+2. **No Runtime Checks**:
+   - Unlike `dynamic_cast`, `static_cast` does not verify at runtime whether the cast is safe.
+
+3. **Numeric Conversions**:
+   - For numeric types, the compiler generates machine instructions to convert the value (e.g., widening or narrowing conversions).
+
+---
+
+### Use Cases of `static_cast`
+
+1. **Safe Conversions**:
+   - Between related types in an inheritance hierarchy (e.g., upcasting).
+   - Between numeric types (e.g., `float` to `int`).
+
+2. **Converting `void*` to Specific Pointer Types**:
+   - Used in low-level programming (e.g., working with C-style APIs).
+
+3. **Avoiding Implicit Conversions**:
+   - Makes explicit what would otherwise happen implicitly.
+
+---
+
+### Summary
+`static_cast` is a safer and more controlled casting operator compared to `reinterpret_cast`, but it does not provide runtime safety like `dynamic_cast`. It’s primarily a compile-time mechanism for:
+- Numeric conversions.
+- Pointer adjustments in inheritance.
+- Casting between `void*` and specific pointer types.
+
+Its use is recommended when the cast is logically valid, and you want the compiler to enforce type correctness.
