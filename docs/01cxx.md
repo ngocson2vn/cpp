@@ -884,3 +884,20 @@ int main() {
 - Casting between `void*` and specific pointer types.
 
 Its use is recommended when the cast is logically valid, and you want the compiler to enforce type correctness.
+<br/>
+
+# The ->* operator
+The `->*` operator in C++ is used to dereference a pointer to a member function (or member variable) when it is called on a pointer to an object of the class. <br/>
+The official name of the `->*` operator in C++ is the **pointer-to-member operator**.
+
+This operator is specifically required because member functions have an implicit `this` pointer, so they are fundamentally different from non-member functions. The `->*` operator helps resolve the combination of a pointer to an object and a pointer to a member function.  
+
+Ref: https://en.cppreference.com/w/cpp/language/operator_member_access#Built-in_pointer-to-member_access_operators
+
+Example: [Pointer to a Member Function](../Examples/operators/pointer_to_member.cc)
+
+## Why `->*` Is Needed
+The `->*` operator is necessary because:
+
+A member function pointer cannot be invoked directly like a normal function pointer due to the implicit this pointer.
+The operator specifies that the call is being made on the object pointed to by `objPtr`.

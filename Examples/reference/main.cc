@@ -60,4 +60,7 @@ int main(int argc, char** argv) {
     printf(" %s", std::bitset<8>(ps[i]).to_string().c_str());
   }
   printf("\n");
+
+  int a[] = {0, 1};
+  TD<decltype(a[0])> td;
 }
