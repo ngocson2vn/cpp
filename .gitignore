@@ -5,7 +5,7 @@
 *.so
 Folly/folly/
 *.cppx
-*/main
-*/*/main
+main
+main2
 Examples/cmake/*/build/
 .ipynb_checkpoints/
