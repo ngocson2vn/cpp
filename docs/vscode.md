@@ -1,5 +1,5 @@
 # How to make IntelliSense work
-## Step 1: Configure correct `includePath`
+## Step 1: Configure correct `includePath` in `c_cpp_properties.json`
 Do not add too many paths to `includePath`.
 For example,
 ```JSON
@@ -30,10 +30,15 @@ For example,
 }
 ```
 
-## Step 2: Fix all errors in `PROBLEMS` tab
+## Step 2: Configure `C_Cpp.intelliSenseEngine` in `settings.json`
+```JSON
+"C_Cpp.intelliSenseEngine": "Tag Parser"
+```
+
+## Step 3: Fix all errors in `PROBLEMS` tab
 Ref: 
 
-## Step 3: Double-check
+## Step 4: Double-check
 IntelliSense should show suggestions as follows:
 ![IntelliSense](./images/intelli_sense.png)
 
