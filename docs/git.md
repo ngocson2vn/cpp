@@ -25,6 +25,11 @@ git checkout FETCH_HEAD
 git checkout -b v1.15.3
 ```
 
+fetch a remote branch:
+```Bash
+git fetch origin <remote_branch>:<local_branch>
+```
+
 # git merge multiple commits
 ```Bash
 git reset --soft xxxxx
