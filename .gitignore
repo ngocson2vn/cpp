@@ -5,6 +5,7 @@
 *.so
 Folly/folly/
 *.cppx
+*.ccx
 main
 main2
 Examples/cmake/*/build/

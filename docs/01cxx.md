@@ -901,3 +901,18 @@ The `->*` operator is necessary because:
 
 A member function pointer cannot be invoked directly like a normal function pointer due to the implicit this pointer.
 The operator specifies that the call is being made on the object pointed to by `objPtr`.
+
+
+# rvalue reference
+The C++ standard specifies that a function returning a `T&&` produces an unnamed temporary expression. Unnamed temporaries are rvalues by nature. Here's a breakdown:
+
+An rvalue reference (`T&&`) itself is just a type, not a value category.
+
+It indicates that the function allows binding to an rvalue.  
+When the function result is used in an expression, the value category of the result is what matters.  
+Value category of a function call:
+
+A function returning by value produces an rvalue (a temporary).  
+A function returning by reference (T&) produces an lvalue.  
+A function returning by rvalue reference (T&&) also produces an rvalue because the value category of the result is prvalue (pure rvalue).
+
