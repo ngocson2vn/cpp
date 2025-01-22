@@ -1,0 +1,2 @@
+# %rip
+The special %rip register stores the address of the next instruction to execute. If we jump to another instruction or call another function, %rip is updated. In particular, when we call another function, we must save the caller's next instruction to execute so that we can resume there when the callee finishes. The call instruction does this for us automatically by storing it on the stack, and the ret instruction pops the value off into %rip.
