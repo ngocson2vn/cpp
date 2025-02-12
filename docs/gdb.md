@@ -29,3 +29,6 @@ https://sourceware.org/gdb/wiki/STLSupport
 sudo apt install subversion -y
 cd /data00/home/son.nguyen/workspace/tools/python
 svn co svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/python
+
+# Print string at address
+x/s 0x7fe1dc3686c0
