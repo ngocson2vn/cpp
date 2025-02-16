@@ -18,7 +18,7 @@ x: Hex format
 g: Giant words (eight bytes).
 
 ## List functions
-```Bash
+```C++
 info functions xxx
 ```
 
@@ -32,3 +32,9 @@ svn co svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/python
 
 # Print string at address
 x/s 0x7fe1dc3686c0
+
+# info symbol
+```C++
+info symbol 0x7fe1dd9f8120
+tensorflow::internal::LogMessageFatal::~LogMessageFatal()@got.plt in section .got.plt of ./lib/libtensorflow_framework.so.2
+```
