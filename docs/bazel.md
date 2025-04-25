@@ -24,4 +24,8 @@ bazel build --subcommands --config=cuda --explain=explain.txt //tensorflow:libte
 ./bazel query "@xla//xla/tsl/profiler/utils:*"
 ./bazel query "@xla//xla/tsl/profiler/backends/cpu:*"
 ./bazel query "@xla//xla/tsl/protobuf:*"
+
+# Dynamic linker
+# The -rdynamic flag is used to instruct the linker to export all dynamic symbols to the dynamic linker, making them available at runtime. 
+--linkopt="-rdynamic"
 ```

@@ -56,3 +56,8 @@ git rm -f path/to/submodule
 # Remove cache
 git rm --cached cuda-samples
 ```
+
+# Create a completely new branch (orphan branch)
+```Bash
+git checkout --orphan new_branch
+```
