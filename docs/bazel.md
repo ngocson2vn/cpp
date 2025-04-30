@@ -29,3 +29,32 @@ bazel build --subcommands --config=cuda --explain=explain.txt //tensorflow:libte
 # The -rdynamic flag is used to instruct the linker to export all dynamic symbols to the dynamic linker, making them available at runtime. 
 --linkopt="-rdynamic"
 ```
+
+# Per-file option
+```Bash
+SRC_FILE_LIST=+tensorflow/core/common_runtime/direct_session.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/common_runtime/executor.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/framework/device.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/common_runtime/gpu/gpu_device.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/common_runtime/device/device_event_mgr.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/stream_executor/cuda/cuda_gpu_executor.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/stream_executor/gpu/gpu_stream.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/stream_executor/gpu/gpu_event.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/common_runtime/gpu/gpu_util.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/stream_executor/event.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/stream_executor/cuda/cuda_platform.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/stream_executor/executor_cache.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/common_runtime/gpu/gpu_process_state.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/stream_executor/cuda/cuda_driver.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/framework/op_kernel.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/framework/shape_inference.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/framework/tensor.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/framework/function.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/common_runtime/immutable_executor_state.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/common_runtime/propagator_state.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/common_runtime/simple_propagator_state.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/kernels/reverse_op.cc,
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/kernels/linalg/matrix_band_part_op.cc
+SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/kernels/scan_ops.cc
+eval "${BAZEL_BIN} build ${BAZEL_JOBS_LIMIT} --config=opt --linkopt=-g --per_file_copt=${SRC_FILE_LIST}@-O0,-g,-fno-inline --strip=never --verbose_failures //tensorflow:libtensorflow_cc.so"
+```
