@@ -57,7 +57,7 @@
             "setupCommands": [
                 {
                     "description": "Test",
-                    "text": "python import sys;sys.path.insert(0, '/data00/home/son.nguyen/workspace/tools/gdb_pretty_print/python'); from libstdcxx.v6.printers import register_libstdcxx_printers; register_libstdcxx_printers(None)",
+                    "text": "python import sys;sys.path.insert(0, '/data00/home/son.nguyen/workspace/tools/python'); from libstdcxx.v6.printers import register_libstdcxx_printers; register_libstdcxx_printers(None)",
                     "ignoreFailures": false
                 },
                 {
@@ -73,6 +73,45 @@
                 {
                     "description": "",
                     "text": "directory ${workspaceRoot}/Cuda"
+                }
+            ]
+        },
+        {
+            "name": "Debug Python",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/data00/home/son.nguyen/.pyenv/versions/3.7.3/bin/python3",
+            "args": [
+                "${workspaceRoot}/Python/myadd/main.py",
+            ],
+            "cwd": "${workspaceRoot}/Python/myadd",
+            "environment": [],
+            "stopAtEntry": false,
+            "linux": {
+                "sourceFileMap": {
+                    "/proc/self/cwd": {
+                        "editorPath": "${workspaceRoot}/Python/myadd",
+                        "useForBreakpoints": false
+                    }
+                }
+            },
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerArgs": "-x '${workspaceFolder}/gdb.conf'",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "",
+                    "text": "directory ${workspaceRoot}/Python/myadd"
                 }
             ]
         }

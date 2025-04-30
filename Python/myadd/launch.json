@@ -1,0 +1,42 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Python",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/data00/home/son.nguyen/.pyenv/versions/3.7.3/bin/python3",
+      "args": [
+          "${workspaceRoot}/Python/myadd/main.py",
+      ],
+      "cwd": "${workspaceRoot}/Python/myadd",
+      "environment": [],
+      "stopAtEntry": false,
+      "linux": {
+          "sourceFileMap": {
+              "/proc/self/cwd": {
+                  "editorPath": "${workspaceRoot}/Python/myadd",
+                  "useForBreakpoints": false
+              }
+          }
+      },
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerArgs": "-x '${workspaceFolder}/gdb.conf'",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          },
+          {
+              "description": "",
+              "text": "directory ${workspaceRoot}/Python/myadd"
+          }
+      ]
+    }
+  ]
+}
