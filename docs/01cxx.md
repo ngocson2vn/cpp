@@ -383,6 +383,7 @@ with tf.Session() as sess:
       node.attr["value"].CopyFrom(new_value)
 ```
 
+<<<<<<< Updated upstream:docs/01cxx.md
 # clang format
 ```Bash
 sudo apt install clang-format
@@ -916,3 +917,16 @@ A function returning by value produces an rvalue (a temporary).
 A function returning by reference (T&) produces an lvalue.  
 A function returning by rvalue reference (T&&) also produces an rvalue because the value category of the result is prvalue (pure rvalue).
 
+=======
+# Octal escape sequences
+In C++, sequences like `\000` are **octal escape sequences**. They represent characters by their value in octal (base 8) format. Here’s what you need to know:
+
+- `\000` is an escape sequence that represents the **null character** (`'\0'`), which has a value of **0** in both decimal and octal.
+- In general, an octal escape sequence takes the form of `\nnn`, where `nnn` can be up to three octal digits (ranging from `\000` to `\377`).
+  
+For example:
+- `\000` → represents the null character (`'\0'`).
+- `\101` → represents the character `'A'`, because 101 in octal is 65 in decimal, which is the ASCII code for `'A'`.
+
+These octal escape sequences are used to represent ASCII or Unicode characters directly by their numeric values in the program.
+>>>>>>> Stashed changes:docs/01notes.md
