@@ -2,7 +2,9 @@
 GitHub repo: https://github.com/alibaba/BladeDISC/tree/main
 <br/>
 
-Given a PyTorch model: [test_torch_blade.py](./test_torch_blade.py)
+Given a PyTorch model: [test_torch_blade.py](./test_torch_blade.py)<br/>
+Workflow Diagram:<br/>
+<img src="./compile.png" width="50%"/>
 
 ## Frontend
 ```Python
@@ -10,7 +12,7 @@ import torch_blade
 ```
 <br/>
 
-**torch_blade/__init__.py**
+**`torch_blade/__init__.py`**
 ```Python
 try:
     import torch_blade.mlir  # noqa
@@ -19,7 +21,7 @@ except ImportError:
 ```
 <br/>
 
-**torch_blade/mlir/__init__.py**
+**`torch_blade/mlir/__init__.py`**
 ```Python
 from torch_blade.config import OptPipelines
 from torch_blade.mlir.disc_engine_conversion import (  # noqa
@@ -190,7 +192,7 @@ compiled_fn = compiler_fn(gm, self.example_inputs())
 'infer_compile'
 ```
 The control is transferred to the registered backend compiler function `infer_compile()` in <br/>
-torch_blade/dynamo/__init__.py
+`torch_blade/dynamo/__init__.py`
 ```Python
 from torch._dynamo.backends.registry import register_backend
 ...
@@ -243,12 +245,32 @@ optimizaiton_func(model, model_inputs)
 <br/>
 
 ## Middle-end
-Split the FX graph into subgraphs (or clusters) of operations
+`torch_blade/mlir/disc_engine_conversion.py`<br/><br/>
+
+**Split the FX graph into subgraphs (or clusters) of operations**
+```Python
+def fusion_block(block):
+    for n in block.nodes():
+        for blk in n.blocks():
+            fusion_block(blk)
+
+    unsupported_nodes = _get_mlir_unsupported(block, model_inputs)
+    logger.info(f"init unsupport nodes: {unsupported_nodes}")
+
+    _ = support_fusion_group.supported_node_fusion(
+        graph, block, unsupported_nodes, support_number_ios=True
+    )
+
+logger.debug(f"Script graph before fusion: {graph}")
+with tools.trust_tracing_shape():
+    fusion_block(graph)
+    logger.debug(f"Script graph after fusion: {graph}")
+    _disc_engine_conversion(c_module)
+```
 <br/>
 
 **Compile subgraphs in parallel**<br/>
-The number of parallelisms is controlled by the env var `COMPILE_PARALLELISM`
-**torch_blade/mlir/disc_engine_conversion.py**<br/>
+The number of parallelisms is controlled by the env var `COMPILE_PARALLELISM`<br/>
 For each subgraph, call function `try_cvt_to_disc_engine_func`
 ```Python
 _compile_torchscript(subgraph, attr_name)
@@ -450,7 +472,7 @@ self.install_global_unsafe(name, compiled_fn)
 ```
 where name is `__compiled_fn_1`
 
-**Make call generated code**</br>
+**Make call compiled_fn**</br>
 torch/_dynamo/output_graph.py
 ```Python
 cg = PyCodegen(tx)
@@ -529,3 +551,6 @@ guarded_code = GuardedCode(out_code, check_fn.check_fn)
 ```
 Then, the `guarded_code` is returned to the caller in `torch/csrc/dynamo/eval_frame.c`, which will execute the `guarded_code` and return result to the caller of `self.forward()` function.
 <br/>
+
+## Inference
+<img src="./infer.png" width="50%"/>
