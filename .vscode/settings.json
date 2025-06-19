@@ -98,7 +98,8 @@
         "*.ipp": "cpp",
         "__atomic_derived": "cpp",
         "__atomic_generated": "cpp",
-        "__memory": "cpp"
+        "__memory": "cpp",
+        "rope": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "C_Cpp.default.compilerPath": "/usr/bin/g++",
