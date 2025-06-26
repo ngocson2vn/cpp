@@ -27,3 +27,6 @@ The computational graph in TorchScript is a static representation of the model's
 
 - Graph Representation: The graph is expressed in a human-readable format (via model.graph) and can be optimized or compiled.
 
+
+# Lowering Pipeline
+PyTorch model -> AOT Module with dynamic shapes -> TorchScript -> [Torch-MLIR + MHLO] -> MHLO
