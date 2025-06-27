@@ -3,6 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
+                "/usr/include",
                 "${workspaceFolder}/**"
             ],
             "defines": [],
@@ -10,10 +11,6 @@
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64",
             "browse": {
-                "path": [
-                    "/usr/local/cuda/include",
-                    "${workspaceFolder}/Folly/folly/include"
-                ],
                 "databaseFilename": "${workspaceFolder}/.vscode/vc.db",
                 "limitSymbolsToIncludedHeaders": false
             }
