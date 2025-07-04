@@ -28,10 +28,28 @@ bazel build --subcommands --config=cuda --explain=explain.txt //tensorflow:libte
 # Dynamic linker
 # The -rdynamic flag is used to instruct the linker to export all dynamic symbols to the dynamic linker, making them available at runtime. 
 --linkopt="-rdynamic"
+
+# Disable remote cache
+--noremote_accept_cached
+
+# Multiple configs
+--config=cuda --config=torch_cuda --config=torch_debug
+
+# Query deps
+bazel query "deps(//mlir/disc:disc_compiler_main)" 2>&1 | grep libtensorflow_framework_import_lib
 ```
 
-# Per-file option
+# TensorFlow
 ```Bash
+export CUDA_HOME=${CUDA_HOME:-/usr/local/cuda-12.4/}
+export CUDA_TOOLKIT_PATH="${CUDA_HOME}"
+export TF_CUDA_HOME=${CUDA_HOME} # for cuda_supplement_configure.bzl
+export TF_CUDA_PATHS="${CUDA_HOME},${HOME}/.cache/cudnn/"
+export TF_CUDA_COMPUTE_CAPABILITIES="7.5,8.0,8.6,8.9,9.0"
+export CUDACXX=${CUDACXX:-"${CUDA_HOME}/bin/nvcc"}
+export LIBRARY_PATH=${CUDA_HOME}/lib64:$LIBRARY_PATH
+export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${CUDA_HOME}/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+
 SRC_FILE_LIST=+tensorflow/core/common_runtime/direct_session.cc
 SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/common_runtime/executor.cc
 SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/framework/device.cc
@@ -57,4 +75,13 @@ SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/kernels/reverse_op.cc,
 SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/kernels/linalg/matrix_band_part_op.cc
 SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/kernels/scan_ops.cc
 eval "${BAZEL_BIN} build ${BAZEL_JOBS_LIMIT} --config=opt --linkopt=-g --per_file_copt=${SRC_FILE_LIST}@-O0,-g,-fno-inline --strip=never --verbose_failures //tensorflow:libtensorflow_cc.so"
+```
+
+# Common repos and targets
+```Python
+"@com_google_protobuf//:protobuf",
+"@com_github_gflags_gflags//:gflags",
+
+# libtensorflow_framework.so.2
+"@org_tensorflow//tensorflow:libtensorflow_framework_import_lib",
 ```

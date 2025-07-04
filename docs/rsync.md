@@ -8,6 +8,7 @@ ls | xargs -n1 -P 10 -I% /usr/bin/rsync -avP % server:~/workspace/tools/
 cat part* > tarball.tar
 
 # rsync create directory on demand
-# -r option will create the destination directory it it does not exist
-rsync -arvP src dst
+# -r, --recursive             recurse into directories
+# -R, --relative              use relative path names
+rsync -avrRP src dst
 ```

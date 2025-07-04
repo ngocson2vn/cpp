@@ -383,7 +383,7 @@ with tf.Session() as sess:
       node.attr["value"].CopyFrom(new_value)
 ```
 
-<<<<<<< Updated upstream:docs/01cxx.md
+
 # clang format
 ```Bash
 sudo apt install clang-format
@@ -929,4 +929,10 @@ For example:
 - `\101` → represents the character `'A'`, because 101 in octal is 65 in decimal, which is the ASCII code for `'A'`.
 
 These octal escape sequences are used to represent ASCII or Unicode characters directly by their numeric values in the program.
->>>>>>> Stashed changes:docs/01notes.md
+
+# std::enable_if_t
+```C++
+// If bool_value = true, then typename = void
+// If bool_value = false, then substitution failure will occurr
+typename = std::enable_if_t<bool_value>
+```

@@ -61,3 +61,13 @@ git rm --cached cuda-samples
 ```Bash
 git checkout --orphan new_branch
 ```
+
+# Change commit author/user
+```Bash
+git commit --amend --author="Sony Nguyen <ngocson2vn@gmail.com>"
+
+# Per repo
+cd repo
+git config user.name "Sony Nguyen"
+git config user.email "ngocson2vn@gmail.com"
+```
