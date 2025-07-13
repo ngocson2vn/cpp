@@ -936,3 +936,32 @@ These octal escape sequences are used to represent ASCII or Unicode characters d
 // If bool_value = false, then substitution failure will occurr
 typename = std::enable_if_t<bool_value>
 ```
+
+# Pack expansion
+A pattern followed by an ellipsis, in which the name of at least one pack appears at least once, is expanded into zero or more instantiations of the pattern, where the name of the pack is replaced by each of the elements from the pack, in order. Instantiations of alignment specifiers are space-separated, other instantiations are comma-separated.
+```C++
+template<class... Us>
+void f(Us... pargs) {}
+ 
+template<class... Ts>
+void g(Ts... args)
+{
+    f(&args...); // “&args...” is a pack expansion
+                 // “&args” is its pattern
+}
+ 
+g(1, 0.2, "a"); // Ts... args expand to int E1, double E2, const char* E3
+                // &args... expands to &E1, &E2, &E3
+                // Us... pargs expand to int* E1, double* E2, const char** E3
+```
+
+Sample code: [pack_expansion](../Examples/pack_expansion/)
+
+**Note:** the C++ language does not allow you to expand a pack into a comma-separated list of expressions like that inside parentheses unless it's part of a valid construct such as an initializer list, a fold expression, or a braced list. For example,
+```C++
+  // This initializer_list argument pack expansion is essentially equal to
+  // using a fold expression with a comma operator. Clang however, refuses
+  // to compile a fold expression with a depth of more than 256 by default.
+  // There seem to be no such limitations for initializer_list.
+  (void)std::initializer_list<int>{0, (printType<Args>(), 0)...};
+```
