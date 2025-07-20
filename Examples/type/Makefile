@@ -1,6 +1,9 @@
 # run: main
 # 	./main
 
+exec: main
+	./main
+
 main: main.o
 	clang++ -g -o main main.o
 

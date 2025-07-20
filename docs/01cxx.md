@@ -955,7 +955,7 @@ g(1, 0.2, "a"); // Ts... args expand to int E1, double E2, const char* E3
                 // Us... pargs expand to int* E1, double* E2, const char** E3
 ```
 
-Sample code: [pack_expansion](../Examples/pack_expansion/)
+Sample code: [pack_expansion](../Examples/pack_expansion/main.cc)
 
 **Note:** the C++ language does not allow you to expand a pack into a comma-separated list of expressions like that inside parentheses unless it's part of a valid construct such as an initializer list, a fold expression, or a braced list. For example,
 ```C++

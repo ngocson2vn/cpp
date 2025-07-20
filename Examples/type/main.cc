@@ -18,8 +18,9 @@ template <typename T>
 void display_type() {
   std::string func_name(__PRETTY_FUNCTION__);
   std::string tmp = func_name.substr(func_name.find_first_of("[") + 1);
-  std::string type = "type" + tmp.substr(1, tmp.size() - 2);
-  std::cout << type << std::endl;
+  // std::cout << "tmp = " << tmp << std::endl;
+  std::string type = tmp.substr(4, tmp.size() - 5);
+  std::cout << "T = " << type << std::endl;
 }
 
 template <typename T>
@@ -37,8 +38,8 @@ int main(int argc, char** argv) {
   display_type<decltype(test_str)>();
   display_type<decltype(dummy_func)>();
 
-  bool ok = std::is_same<unsigned char, uint8_t>::value;
-  std::cout << "ok = " << ok << std::endl;
+  // bool ok = std::is_same<unsigned char, uint8_t>::value;
+  // std::cout << "ok = " << ok << std::endl;
 
   display_inferred_type<uint8_t>();
   using Kernel = FAKernel<uint8_t>;

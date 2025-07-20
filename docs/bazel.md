@@ -31,6 +31,7 @@ bazel build --subcommands --config=cuda --explain=explain.txt //tensorflow:libte
 
 # Disable remote cache
 --noremote_accept_cached
+--noremote_upload_local_results
 
 # Multiple configs
 --config=cuda --config=torch_cuda --config=torch_debug
