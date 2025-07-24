@@ -2,6 +2,16 @@
 #include <vector>
 
 struct ClassA {
+    ClassA() = default;
+
+    ClassA(ClassA&& rhs) {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        size = rhs.size;
+        items = std::move(rhs.items);
+    }
+
+    ClassA& operator=(ClassA&& rhs) = default;
+
     int size;
     std::vector<std::string*> items;
 };
@@ -12,10 +22,10 @@ struct ClassB {
     ClassB() = default;
 
     // Move Constructor
-    ClassB(ClassB&& rhs) {
-        std::cout << "ClassB(ClassB&& rhs):" << std::endl;
+    // ClassB(ClassB&& rhs) = default;
+    ClassB(ClassB&& rhs) : a(std::move(rhs.a)) {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
         std::cout << "  -> this: " << this << ", rhs: " << &rhs << std::endl;
-        a = std::move(rhs.a);
     }
 
     ~ClassB() {
@@ -46,10 +56,11 @@ struct ClassB {
 };
 
 void play_rvalue(ClassB&& b) {
-    b.dance();
+    // b.dance();
 }
 
 void play_lvalue(ClassB b) {
+    std::cout << __PRETTY_FUNCTION__ << std::endl;
     b.dance();
 }
 
@@ -59,20 +70,20 @@ int main() {
 
     std::cout << std::endl;
     std::cout << "b: " << &b << std::endl;
-    play_rvalue(std::move(b));
-    // play_lvalue(std::move(b));
+    // play_rvalue(std::move(b));
+    play_lvalue(std::move(b));
 
-    std::cout << std::endl;
-    std::string empty = b.empty() ? "true" : "false";
-    std::cout << "b is empty: " << empty << std::endl;
-    std::cout << std::endl;
+    // std::cout << std::endl;
+    // std::string empty = b.empty() ? "true" : "false";
+    // std::cout << "b is empty: " << empty << std::endl;
+    // std::cout << std::endl;
 
-    std::cout << "===============================================" << std::endl;
-    for (int i = 0; i < 10; i++) {
-        std::cout << std::endl;
-        std::cout << "i = " << i << std::endl;
-        ClassB b;
-        b.init();
-        std::cout << "Done using b" << std::endl;
-    }
+    // std::cout << "===============================================" << std::endl;
+    // for (int i = 0; i < 10; i++) {
+    //     std::cout << std::endl;
+    //     std::cout << "i = " << i << std::endl;
+    //     ClassB b;
+    //     b.init();
+    //     std::cout << "Done using b" << std::endl;
+    // }
 }

@@ -21,6 +21,44 @@ struct detector<std::void_t<Op<Args...>>, Op, Args...> {
 template <template <class...> class Op, class... Args>
 using is_detected = typename detail::detector<void, Op, Args...>::value_t;
 
+template <typename T, typename... Args>
+using has_get_interface_id = decltype(T::getInterfaceID());
+
+// examples/bazel-examples/external/llvm-project/mlir/include/mlir/Support/InterfaceSupport.h
+template <typename T, typename... Args>
+using has_get_interface_id = decltype(T::getInterfaceID());
+
+template <typename T>
+using detect_get_interface_id = is_detected<has_get_interface_id, T>;
+
+/// Template utility that computes the number of elements within `T` that
+/// satisfy the given predicate.
+// The primary template handles the base case: when the parameter pack Ts... is empty
+template <template <class> class Pred, size_t N, typename... Ts>
+struct count_if_t_impl {
+  static constexpr auto value = std::integral_constant<size_t, N>::value;
+};
+
+/*
+This is a partial specialization of the primary template.
+It is more specific because it constrains the parameter pack Ts... from the primary template to a non-empty pack, where:
+- The first type in the pack is explicitly named T.
+- The remaining types are captured as Us... (another variadic pack).
+
+This specialization matches when there is at least one type in the parameter pack (i.e., T, Us...).
+*/
+template <template <class> class Pred, size_t N, typename T, typename... Us>
+struct count_if_t_impl<Pred, N, T, Us...> {
+  static constexpr auto value = std::integral_constant<size_t, count_if_t_impl<Pred, N + (Pred<T>::value ? 1 : 0), Us...>::value>::value;
+};
+
+template <template <class> class Pred, typename... Ts>
+using count_if_t = count_if_t_impl<Pred, 0, Ts...>;
+// count_if_t_impl<detect_get_interface_id, 0, <AddOp, MulOp>>;
+
+template <typename... Types>
+constexpr auto num_interface_types_v = count_if_t<detect_get_interface_id, Types...>::value; // Refer to ./detect_get_interface_id.h
+
 class TypeID {
  public:
   TypeID() = default;
@@ -60,15 +98,19 @@ class TypeID {
   std::string name_;
 };
 
-class LmhloOp {
+class AddOp {
  public:
   static TypeID getInterfaceID() {
-    return TypeID::get<LmhloOp>();
+    return TypeID::get<AddOp>();
   }
 };
 
-template <typename T, typename... Args>
-using has_get_interface_id = decltype(T::getInterfaceID());
+class MulOp {
+ public:
+  static TypeID getInterfaceID() {
+    return TypeID::get<MulOp>();
+  }
+};
 
 template <typename T>
 void display_type() {
@@ -80,14 +122,25 @@ void display_type() {
 }
 
 int main(int argc, char** argv) {
+  std::cout << "======================================================" << std::endl;
+  std::cout << "Test is_detected" << std::endl;
+  std::cout << "======================================================" << std::endl;
   // Test if has_get_interface_id works
   // display_type<has_get_interface_id<LmhloOp>>();
 
-  TypeID tid = LmhloOp::getInterfaceID();
+  TypeID tid = AddOp::getInterfaceID();
   std::cout << tid << std::endl;
-  if constexpr(is_detected<has_get_interface_id, LmhloOp>::value) {
+  if constexpr(is_detected<has_get_interface_id, AddOp>::value) {
     std::cout << "OK" << std::endl;
   } else {
     std::cout << "NG" << std::endl;
   }
+  std::cout << std::endl;
+
+  std::cout << "======================================================" << std::endl;
+  std::cout << "Test num_interface_types_v" << std::endl;
+  std::cout << "======================================================" << std::endl;
+  // display_type<num_interface_types_t<AddOp, MulOp>>();
+  constexpr size_t numInterfaces = num_interface_types_v<AddOp, std::string, MulOp, int>;
+  std::cout << "numInterfaces = " << numInterfaces << std::endl;
 }
