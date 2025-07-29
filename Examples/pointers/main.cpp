@@ -5,6 +5,10 @@ struct Student {
     int id;
     std::string name;
 
+    Student() = default;
+
+    Student(int id, const std::string& name) : id(id), name(name) {}
+
     void study() {
         std::cout << name << " is studying" << std::endl;
     }
@@ -37,14 +41,33 @@ void display_type() {
   std::cout << type << std::endl;
 }
 
+typedef unsigned long long PtrType;
+
 int main(int argc, char** argv) {
     const Student s1{100, "Son"};
     set_score(&s1, 10);
 
     std::cout << std::endl;
-    Student* student = new Student();
+
+    // student holds a memory address (a 64-bit integer number)
+    Student* student = new Student(10, "Foo");
+
     display_type<decltype(*student)>();
     std::cout << std::endl;
+
+    // Explicitly cast the memory address that student holds to an `unsigned long long` number
+    PtrType studentPtr = reinterpret_cast<PtrType>(student);
+    std::cout << "student: " << student << std::endl;
+    std::cout << "studentPtr: " << studentPtr << std::endl;
+    Student* sptr = reinterpret_cast<Student*>(studentPtr);
+    sptr->study();
+
+    void* x;
+    void** xPtr = &x;
+    
+    // Copy memory address to x
+    *xPtr = reinterpret_cast<void*>(student);
+    std::cout << "x: " << x << std::endl;
 
     delete student;
 }

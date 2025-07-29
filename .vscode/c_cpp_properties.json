@@ -4,6 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "/usr/include",
+                "/usr/include/c++/12.5.0",
                 "${workspaceFolder}/**"
             ],
             "defines": [],
@@ -11,6 +12,11 @@
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64",
             "browse": {
+                "path": [
+                    "/usr/include",
+                    "/usr/include/c++/12.5.0",
+                    "${workspaceFolder}/**"
+                ],
                 "databaseFilename": "${workspaceFolder}/.vscode/vc.db",
                 "limitSymbolsToIncludedHeaders": false
             }

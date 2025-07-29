@@ -30,3 +30,6 @@ pip install --upgrade pip
 # Install kinit
 #==========================================================================================
 sudo apt install krb5-user
+
+# add-apt-repository
+sudo apt install software-properties-common

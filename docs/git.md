@@ -3,7 +3,21 @@
 git submodule add -f https://github.com/tensorflow/tensorflow.git third_party/tensorflow
 git config -f .gitmodules submodule.third_party/tensorflow.shallow true
 git submodule update --init --recursive
+
+## Manual way
+# 1. Create .gitmodules
+[submodule "llvm-project"]
+	path = llvm-project
+	url = https://github.com/llvm/llvm-project.git
+	shallow = true
+
+# 2. Update index
+git update-index --add --cacheinfo 160000 570885128351868c1308bb22e8ca351d318bc4a1 llvm-project
+
+# 3. Init
+git submodule update --init --recursive
 ```
+
 
 # shows modified files
 ```Bash
