@@ -85,3 +85,9 @@ cd repo
 git config user.name "Sony Nguyen"
 git config user.email "ngocson2vn@gmail.com"
 ```
+
+# Tags
+```Bash
+git fetch origin --tags --prune
+git checkout -b v3.4.0 tags/v3.4.0
+```

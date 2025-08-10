@@ -34,4 +34,11 @@ int main(int argc, char** argv) {
 
   const char name2[] = "Son Nguyen";
   display_type<decltype(name2)>();
+
+  int arr[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  auto x1 = arr;
+  auto& x2 = arr;
+  display_type<decltype(arr)>();
+  display_type<decltype(x1)>();
+  display_type<decltype(x2)>();
 }

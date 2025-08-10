@@ -10,3 +10,5 @@ main
 main2
 Examples/cmake/*/build/
 .ipynb_checkpoints/
+
+docs/14MLCompiler/pytorch/pytorch_src/

@@ -5,6 +5,8 @@ struct Student {
     int id;
     std::string name;
 
+    Student() = default;
+
     Student(int id, const std::string& name = "")
         : id(id), name(name) {};
 
@@ -45,6 +47,9 @@ Student get_student_3000() {
 }
 
 int main(int argc, char** argv) {
+    Student s;
+    s.dump();
+
     const Student s1{100, "Son"};
     set_score(&s1, 10);
 

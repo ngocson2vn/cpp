@@ -1,3 +1,8 @@
+# Build
+cd triton
+pip install -e .
+
+# Compile a sample kernel
 python3 python/triton/tools/compile.py \
   --kernel-name add_kernel \
   --signature "*fp32,*fp32,*fp32,i32,64" \
