@@ -1,4 +1,7 @@
 import os
+
+os.environ["TORCHDYNAMO_VERBOSE"] = "1"
+
 # Enable IR dumping for Inductor
 os.environ["TORCH_COMPILE_DEBUG"] = "1"
 os.environ["TORCH_COMPILE_DEBUG_DIR"] = "./debug"
@@ -32,11 +35,3 @@ x = torch.rand(3, 4).cuda()
 y = torch.rand(3, 4).cuda()
 res = toy(x, y)
 print(f"Result: {res}")
-
-
-# # Perform the addition
-# result = compiled_add(a, b)
-
-# print("Tensor a:", a)
-# print("Tensor b:", b)
-# print("Result:", result)
