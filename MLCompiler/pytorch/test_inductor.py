@@ -52,3 +52,4 @@ for i in range(50):
   res = toy(x, y)
   torch.cuda.nvtx.range_pop()
 torch.cuda.profiler.stop() # end profiling
+print(f"Result: {res}")
