@@ -6,22 +6,27 @@ os.environ["TORCHDYNAMO_VERBOSE"] = "1"
 # Enable IR dumping for Inductor
 os.environ["TORCH_COMPILE_DEBUG"] = "1"
 os.environ["TORCH_COMPILE_DEBUG_DIR"] = "./debug"
+os.environ["DYNAMO_CKPT_PATH"] = "./debug/aot"
 os.environ['TORCHINDUCTOR_CACHE_DIR'] = "./debug/aot"
 os.environ["INDUCTOR_POST_FUSION_SVG"] = "1"
 os.environ["INDUCTOR_ORIG_FX_SVG"] = "1"
 os.environ["TORCHINDUCTOR_PROLOGUE_FUSION"] = "1"
 os.environ["TORCHINDUCTOR_DEBUG_FUSION"] = "1"
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 import torch
 from torch import nn
 
-import pdb
+import ipdb
 
 torch.set_float32_matmul_precision('high')
 
 class ToyModule(nn.Module):
   def __init__(self):
     super().__init__()
+    self.forward = torch.compile(self.forward, backend="inductor")
 
   def forward(self, x, y):
     z = x + y
@@ -34,22 +39,21 @@ class ToyModule(nn.Module):
     return res
 
 toy = ToyModule()
-toy.forward = torch.compile(toy.forward, backend="inductor")
-
 x = torch.rand(3, 4).cuda()
 y = torch.rand(3, 4).cuda()
 
 # pdb.set_trace()
-# res = toy(x, y)
-# print(f"Result: {res}")
-
-torch.cuda.profiler.start() # start profiling
-for i in range(50):
-  if i < 3:
-    torch.cuda.nvtx.range_push(f"warmup{i}")
-  else:
-    torch.cuda.nvtx.range_push(f"infer{i-3}")
-  res = toy(x, y)
-  torch.cuda.nvtx.range_pop()
-torch.cuda.profiler.stop() # end profiling
+res = toy(x, y)
 print(f"Result: {res}")
+
+if os.environ.get("PERF_MODE") == "true":
+  torch.cuda.profiler.start() # start profiling
+  for i in range(50):
+    if i < 3:
+      torch.cuda.nvtx.range_push(f"warmup{i}")
+    else:
+      torch.cuda.nvtx.range_push(f"infer{i-3}")
+    res = toy(x, y)
+    torch.cuda.nvtx.range_pop()
+  torch.cuda.profiler.stop() # end profiling
+  print(f"Result: {res}")

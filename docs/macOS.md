@@ -19,3 +19,9 @@ launchctl load ~/Library/LaunchAgents/com.user.jupyter.plist
 launchctl start ~/Library/LaunchAgents/com.user.jupyter.plist
 ```
 
+# Mount a Remote Directory with SSHFS
+```Bash
+brew install macfuse
+brew install sshfs
+mkdir ~/remote_mount_point
+```

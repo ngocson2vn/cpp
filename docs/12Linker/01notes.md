@@ -1,3 +1,9 @@
+# LIBRARY_PATH
+```Bash
+LIBRARY_PATH=/usr/local/cuda-12.4/lib64
+```
+Linker will search libraries in ${LIBRARY_PATH} directories.
+
 # PLT and GOT
 https://systemoverlord.com/2017/03/19/got-and-plt-for-pwning.html
 

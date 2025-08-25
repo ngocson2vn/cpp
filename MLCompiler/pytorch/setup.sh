@@ -4,12 +4,16 @@
 Python 3.11.2
 
 # torch
-pip install torch
-pip install pydot
-pip install ipdb
-sudo apt-get install graphviz
+pip install torch 
+pip install pydot ipdb
+sudo apt-get install -y graphviz cmake ccache
 
-# triton
+# openai triton
 cd triton
 pip install -e .
 ```
+
+# b triton
+cd triton
+pip3.11 install -r python/requirements.txt
+pip3.11 install -e python/
