@@ -19,6 +19,9 @@ logging.basicConfig(level=logging.DEBUG)
 import torch
 from torch import nn
 
+from custom_pass import CustomFusion
+torch._inductor.config._pre_fusion_custom_pass = CustomFusion.fuse
+
 import ipdb
 
 torch.set_float32_matmul_precision('high')
