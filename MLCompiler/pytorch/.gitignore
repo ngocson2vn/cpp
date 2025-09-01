@@ -1,3 +1,4 @@
 *.pyc
 torch
 triton
+model__0_inference_0.svg

@@ -83,6 +83,8 @@ Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especiall
 # Flow
 Dynamo -> FX graph -> Inductor 
     │                      │
+    │                      └─> Lower aten ops to Inductor IR ops
+    │                      │
     │                      └─> Kernel Fusion |-> Codegen Triton Kernels
     │                      │
     │                      └─> Codegen Python Wrapper Code including Triton kernels and calls to Triton kernels 
@@ -104,6 +106,14 @@ Dynamo -> FX graph -> Inductor
     └─> convert_frame.py: class CatchErrorsWrapper returns the guarded_code to the caller in `torch/csrc/dynamo/eval_frame.c`.
     │
     └─> The caller evaluates the guarded code
+
+
+Summary: FX graph --[lowering]--> Inductor IR (Buffers)--> Scheduler --[fusing]--> FusedSchedulerNode nodes --> CUDACombinedScheduling --[codegening]--> Triton kernels
+
+1. Understand lowering
+2. Understand fusing
+3. Understand codegening
+
 
 # Inductor config
 /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/config.py
@@ -758,85 +768,292 @@ with V.set_graph_handler(graph):
     graph.run(*example_inputs)
 
 graph():
-    %arg0_1 : [num_users=2] = placeholder[target=arg0_1]
-    %arg1_1 : [num_users=1] = placeholder[target=arg1_1]
-    %add : [num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%arg0_1, %arg1_1), kwargs = {})
-    %view : [num_users=1] = call_function[target=torch.ops.aten.reshape.default](args = (%add, [4, 3]), kwargs = {})
-    %mm : [num_users=1] = call_function[target=torch.ops.aten.mm.default](args = (%arg0_1, %view), kwargs = {})
-    %sum_1 : [num_users=1] = call_function[target=torch.ops.aten.sum.dim_IntList](args = (%mm, [1]), kwargs = {})
-    %sigmoid : [num_users=1] = call_function[target=torch.ops.aten.sigmoid.default](args = (%sum_1,), kwargs = {})
-    return (sigmoid,)
+  %arg0_1 : [num_users=1] = placeholder[target=arg0_1]
+  %arg1_1 : [num_users=1] = placeholder[target=arg1_1]
+  %add : [num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%arg0_1, %arg1_1), kwargs = {})
+  %sum_1 : [num_users=1] = call_function[target=torch.ops.aten.sum.dim_IntList](args = (%add, [1]), kwargs = {})
+  %sigmoid : [num_users=1] = call_function[target=torch.ops.aten.sigmoid.default](args = (%sum_1,), kwargs = {})
+  return (sigmoid,)
 ```
 
-## Lower torch.ops.aten.add.Tensor
-V0828 02:13:45.831000 3131540 site-packages/torch/_inductor/graph.py:1455] [0/0] lowering %add : [num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%arg0_1, %arg1_1), kwargs = {}) 
-V0828 02:13:45.832000 3131540 site-packages/torch/_inductor/graph.py:1181] [0/0]   via <function make_pointwise.<locals>.inner at 0x7fd451003100>
+## How is torch.ops.aten.add.Tensor lowered?
+V0828 04:36:42.229000 3516361 site-packages/torch/_inductor/graph.py:1455] [0/0] lowering %add : [num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%arg0_1, %arg1_1), kwargs = {}) 
+V0828 04:36:42.229000 3516361 site-packages/torch/_inductor/graph.py:1181] [0/0]   via <function make_pointwise.<locals>.inner at 0x7fdf6a70b100>
 ```Python
 # /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/graph.py:1189
 lowered_fn = lowerings[target]
-out = lowered_fn(*args, **kwargs)  # type: ignore[index]
-print(lowered_fn)
-<function make_pointwise.<locals>.inner at 0x7f098a7f7100>
+repr(target)
+"<OpOverload(op='aten.add', overload='Tensor')>"
 
-# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/lowering.py
+out = lowered_fn(*args, **kwargs)  # type: ignore[index]
+repr(lowered_fn)
+'<function make_pointwise.<locals>.inner at 0x7fbec91b8c20>'
+
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/lowering.py:6353
 add = register_pointwise(
     aten.add, allow_alpha=True, override_fn_when_input_bool="logical_or"
 )
 
-# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/lowering.py
-def _register_lowering(
-    aten_fn,
-    decomp_fn,
-    broadcast,
-    type_promotion_kind: Optional[ELEMENTWISE_TYPE_PROMOTION_KIND],
-    convert_input_to_bool,
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/lowering.py:843
+def register_pointwise(
+    aten_fn, # "<OpOverloadPacket(op='aten.add')>"
+    name=None,
+    broadcast=True,
+    type_promotion_kind=ELEMENTWISE_TYPE_PROMOTION_KIND.DEFAULT,
+    convert_input_to_bool=False,
+    override_return_dtype=None,
+    override_fn_when_input_bool=None,
+    allow_alpha=False,
+    use_libdevice_for_f64=False,
+    triton_fallback=None,
 ):
-    """
-    Add a lowering to lowerings dict
-
-    Arguments:
-        aten_fn: torch.ops.aten.* fn we are lowering
-        decomp_fn: alternate implementation on our IR
-        broadcast: True to apply broadcasting to tensor inputs
-        type_promotion_kind: kind of type promotion applied to tensor inputs, `None` means no type promotion
-        convert_input_to_bool: some logical ops require inputs are converted to bool
-    """
-
-    @functools.wraps(decomp_fn) # Capture metadata of decomp_fn
-    def wrapped(*args, **kwargs): # Wrap decomp_fn
-        args: list[Any] = list(args)
-        kwargs: dict[str, Any] = dict(kwargs)
-        unpacked = False
-        # TODO maybe we need to use pytrees here
-        if len(args) == 1 and isinstance(args[0], (list, tuple)):
-            unpacked = True
-            args = list(args[0])
-
-        if not all(
-            (fn in fallbacks or in_namespace(fn, "_c10d_functional")) for fn in aten_fn
-        ):
-            # explicitly assert for "out=" ops for better error messages
-            assert not any(x == "out" for x in kwargs.keys()), (
-                "out= ops aren't yet supported"
-            )
-
-        args, kwargs = transform_args(
-            args, kwargs, broadcast, type_promotion_kind, convert_input_to_bool
+    """A pointwise function that maps ops.{name} to inputs"""
+    name = name or aten_fn.__name__
+    fn = ops_wrapper(name)
+    if use_libdevice_for_f64:
+        fn_libdevice = ops_wrapper("libdevice_" + name)
+        register_op_dtype_propagation_rules(
+            "libdevice_" + name, type_promotion_kind, override_return_dtype
         )
 
-        if unpacked:
-            args = [args]
+    register_op_dtype_propagation_rules(
+        name, type_promotion_kind, override_return_dtype
+    )
 
-        out = decomp_fn(*args, **kwargs)
-        validate_ir(out)
+    if override_fn_when_input_bool is not None:
+        override_fn_when_input_bool = ops_wrapper(override_fn_when_input_bool)
 
-        return out
+    fn = make_pointwise(
+        fn,
+        override_return_dtype=override_return_dtype,
+        override_fn_when_input_bool=override_fn_when_input_bool,
+        override_fn_when_gpu_float64=fn_libdevice if use_libdevice_for_f64 else None,  # type: ignore[possibly-undefined]
+        allow_alpha=allow_alpha,
+        triton_fallback=triton_fallback,
+    )
+    fn = register_lowering(
+        aten_fn,
+        broadcast=broadcast,
+        type_promotion_kind=type_promotion_kind,
+        convert_input_to_bool=convert_input_to_bool,
+    )(fn)
 
-    aten_fn = get_overloads(aten_fn)
+    if hasattr(prims, name):
+        register_lowering(
+            getattr(prims, name),
+            type_promotion_kind=None,
+            convert_input_to_bool=convert_input_to_bool,
+        )(fn)
+    return fn
 
-    lowerings.update(dict.fromkeys(aten_fn, wrapped))
-    return wrapped
 
-print(decomp_fn)
-<function make_pointwise.<locals>.inner at 0x7fd451003060>
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/ir.py
+from .virtualized import ops, OpsValue, V
+
+def ops_wrapper(name: str) -> Callable[..., OpsValue]:
+    assert isinstance(name, str)
+
+    def fn(*args: object, **kwargs: object) -> OpsValue:
+        return getattr(ops, name)(*args, **kwargs)
+
+    return fn
+
+
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/virtualized.py
+ops: OpsHandler[Any] = OpsWrapper()
+
+class OpsWrapper(DefaultHandler):
+    """This wraps any returned IR values into an `OpsValue` instance, so that we
+    can overload the magic methods for writing mathematical expressions fluently.
+    """
+
+    def _default(self, name: str, args: tuple[Any, ...], kwargs: dict[str, Any]) -> Any:
+        new_args = [OpsWrapper._unwrap(a) for a in args]
+        new_kwargs = {k: OpsWrapper._unwrap(v) for k, v in kwargs.items()}
+        return OpsWrapper._wrap(getattr(_ops, name)(*new_args, **new_kwargs))
+
+class DefaultHandler(OpsHandler[Any]):
+    def __getattr__(self, name: str) -> Any:
+        def fallback(*args: Any, **kwargs: Any) -> Any:
+            return self._default(name, args, kwargs)
+
+        # would like to remove this function entirely, but it's used in MTIA backend
+        warnings.warn(f"undefined OpHandler.{name}, please add missing op schema")
+        return fallback
+
+# fn = ops_wrapper(name)
+# Flow: fn -> make_pointwise -> wrapper1(fn) -> register_lowering -> wrapper2(wrapper1(fn))
+
+#================================================================================================================================================================================
+# 1. FX Node Lowering Call Stack
+#================================================================================================================================================================================
+
+# FX Node --forwards--> target=aten_fn --forwards--> lowerings[target] --maps--> _register_lowering.<locals>.wrapped --calls--> make_pointwise.<locals>.inner --> does {
+#   - define inner_fn --wraps--> ops_wrapper(aten_fn.__name__)
+#   - create a Pointwise (which is a Loops(IRNode)) with inner_fn = the inner_fn defined above
+#   - return a TensorBox(StorageBox(Pointwise))
+# }
+
+#----------------------------------------
+# Explain make_pointwise.<locals>.inner
+#----------------------------------------
+loaders = [x.make_loader() for x in inputs]
+# Here, inputs is a tuple of TensorBox objects:
+# (
+#   TensorBox(StorageBox(InputBuffer(name='arg0_1', layout=FixedLayout('cuda:0', torch.float32, size=[3, 9], stride=[9, 1])))), 
+#   TensorBox(StorageBox(InputBuffer(name='arg1_1', layout=FixedLayout('cuda:0', torch.float32, size=[3, 9], stride=[9, 1]))))
+# )
+
+# x.make_loader() -> InputBuffer.make_loader --returns--> Buffer.make_loader.<locals>.loader
+def loader(index):  # type: ignore[no-untyped-def]
+    indexer = self.make_indexer() # Here, self is the InputBuffer object
+    return ops.load(self.name or "unnamed", indexer(index)) # self.name is either 'arg0_1' or 'arg1_1'
+
+# InputBuffer.make_indexer() -> ... -> FixedLayout.make_indexer
+class FixedLayout(Layout):
+    """A Tensor layout we cannot change"""
+
+    def make_indexer(self) -> Callable[[Sequence[Expr]], Expr]:
+        """A closure containing math to read a given element"""
+
+        def indexer(index):  # type: ignore[no-untyped-def]
+            assert len(index) == len(self.stride)
+            assert len(index) == len(self.size)
+            result = self.offset
+            for idx, stride, sz in zip(index, self.stride, self.size):
+                if sz != 1:
+                    result = result + idx * stride
+            return result
+
+        return indexer
+
+# indexer returns actual Buffer offset of an element with given index
+# So loader(index) returns a loaded value at index in the Buffer
+
+# Next, make_pointwise.<locals>.inner defines a inner_fn function that works on an index as follows
+def inner_fn(index):
+    assert len(index) == len(ranges), f"wrong ndim {index} {ranges}"
+    if dtype == torch.bool and override_fn_when_input_bool is not None:
+        return override_fn_when_input_bool(*[load(index) for load in loaders])
+    elif (
+        override_fn_when_gpu_float64
+        and is_gpu_device
+        and dtype == torch.float64
+    ):
+        return override_fn_when_gpu_float64(*[load(index) for load in loaders])
+    else:
+        inputs_loaded = []
+        for inp_index, load in enumerate(loaders):
+            out = load(index)
+            inp_dtype = inputs[inp_index].get_dtype()
+            if emulate_precision_casts and inp_dtype in low_pr_fp:
+                downcast = ops.to_dtype(out, inp_dtype, use_compute_types=False)
+                out = ops.to_dtype(downcast, inp_dtype)
+            inputs_loaded.append(out)
+
+        # inputs_loaded are loaded values from input Buffers for the same index
+        out = fn(*inputs_loaded) # Here, fn is ops_wrapper(aten_fn.__name__)
+        if emulate_precision_casts:
+            # fp16/bf16 kernels are computed in fp32. Casting down to fp16/bf16 here,
+            # then upcasting again, to emulate casts that eager would do.
+            downcast = ops.to_dtype(out, dtype, use_compute_types=False)
+            return ops.to_dtype(downcast, dtype)
+        return out # the computed result for the index
+
+
+# Next, create a Pointwise
+pw = Pointwise.create(
+    device=device,  # type: ignore[arg-type]
+    dtype=dtype,
+    inner_fn=inner_fn,
+    ranges=ranges,
+)
+
+# Pointwise.create
+@classmethod
+def create(cls, *args: Any, **kwargs: Any) -> TensorBox:
+    origin_node = kwargs.pop("origin_node", None)
+    tb = kwargs.pop("traceback", None)
+    # if "origin_node" in kwargs:
+    #     breakpoint()
+    r = cls(*args, **kwargs) # cls is Pointwise
+    # Need to explicitly set origin_node here to propagate it down.
+    # todo(chilli): I think it would be better for IRNode to directly set
+    # origin_node
+    r._post_init_setattr("origin_node", origin_node)
+    r._post_init_setattr("traceback", tb or r.traceback)
+    return TensorBox.create(r)
+
+# TensorBox.create
+class TensorBox(MutableBox):
+    @staticmethod
+    def create(data):  # type: ignore[no-untyped-def]
+        if isinstance(data, ShapeAsConstantBuffer):
+            return data
+        return TensorBox(StorageBox(data)) # Here, data is the Pointwise object
+
+# Return the TensorBox(StorageBox(Pointwise)) which captures
+#   1. All the input Buffers
+#   2. Computation of the aten op
+
+# TensorBox objects are realized to Buffer nodes
+
+#================================================================================================================================================================================
+# 2. Scheduler
+#================================================================================================================================================================================
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/scheduler.py
+# class Scheduler:
+# Input are a list of Buffer nodes:
+nodes = [
+  0: ComputedBuffer(name='buf0', layout=FixedLayout('cuda:0', torch.float32, size=[3], stride=[1]), data=Reduction(
+    'cuda',
+    torch.float32,
+    def inner_fn(index, rindex):
+        i0 = index
+        r0_0 = rindex
+        tmp0 = ops.load(arg0_1, r0_0 + 9 * i0)
+        tmp1 = ops.load(arg1_1, r0_0 + 9 * i0)
+        tmp2 = tmp0 + tmp1
+        return tmp2
+    ,
+    ranges=[3],
+    reduction_ranges=[9],
+    reduction_type=sum,
+    origin_node=sum_1,
+    origins=OrderedSet([sum_1, add])
+  )),
+  1: ComputedBuffer(name='buf1', layout=FixedLayout('cuda:0', torch.float32, size=[3], stride=[1]), data=Pointwise(device=device(type='cuda', index=0), dtype=torch.float32, inner_fn=<function make_pointwise.<locals>.inner.<locals>.inner_fn at 0x7fdcff2b34c0>, ranges=[3]))
+]
+
+# Create BaseSchedulerNode nodes from the Buffer nodes
+self.nodes = [self.create_scheduler_node(n) for n in nodes]
+
+def create_scheduler_node(self, node: ir.Operation) -> BaseSchedulerNode:
+    assert node.get_origins() is not None, (
+        "All nodes passed to scheduling must have an origin"
+    )
+    if node.is_no_op():
+        return NopKernelSchedulerNode(self, node)
+    elif isinstance(node, (ir.ComputedBuffer, ir.TemplateBuffer)):
+        return SchedulerNode(self, node)
+    elif isinstance(node, ir.ExternKernel):
+        return ExternKernelSchedulerNode(self, node)
+    else:
+        raise NotImplementedError(node)
+
+class SchedulerNode(BaseSchedulerNode):
+    _sizes: tuple[Sequence[sympy.Expr], ...]
+    _body: LoopBody
+
+    def __init__(
+        self,
+        scheduler: Scheduler,
+        node: Union[ir.ComputedBuffer, ir.TemplateBuffer],
+    ) -> None:
+        super().__init__(scheduler)
+        self._init_from_node(node)
+        self._compute_attrs()
+
+# _compute_attrs(...)
+
 ```

@@ -31,19 +31,25 @@ class ToyModule(nn.Module):
     super().__init__()
     self.forward = torch.compile(self.forward, backend="inductor")
 
+  # def forward(self, x, y):
+  #   z = x + y
+  #   d0 = z.shape[0]
+  #   d1 = z.shape[1]
+  #   u = torch.reshape(z, (d1, d0))
+  #   h = torch.matmul(x, u)
+  #   logit = torch.sum(h, 1)
+  #   res = torch.sigmoid(logit)
+  #   return res
+
   def forward(self, x, y):
     z = x + y
-    d0 = z.shape[0]
-    d1 = z.shape[1]
-    u = torch.reshape(z, (d1, d0))
-    h = torch.matmul(x, u)
-    logit = torch.sum(h, 1)
+    logit = torch.sum(z, 1)
     res = torch.sigmoid(logit)
     return res
 
 toy = ToyModule()
-x = torch.rand(3, 4).cuda()
-y = torch.rand(3, 4).cuda()
+x = torch.rand(3, 9).cuda()
+y = torch.rand(3, 9).cuda()
 
 # pdb.set_trace()
 res = toy(x, y)
