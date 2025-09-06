@@ -30,3 +30,5 @@ The computational graph in TorchScript is a static representation of the model's
 
 # Lowering Pipeline
 PyTorch model -> AOT Module with dynamic shapes -> TorchScript -> [Torch-MLIR + MHLO] -> MHLO
+
+# TORCH_LIBRARY macro

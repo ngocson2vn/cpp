@@ -71,3 +71,78 @@ volatile const&&
 Volatile isn't normally useful, so I wouldn't worry about it. & is the default when you don't specify anything. Const is the most common non-default. Ultimately a good C++ library will need to deal with these possibilities, but it's not something you'll see often in normal user code.
 
 I'm also sure that given how complex C++ is I've gotten something wrong, hopefully someone catches it :)
+
+
+# Error undefined symbol: _ZN5folly3f146detail12F14LinkCheckILNS1_17F14IntrinsicsModeE1EE5checkEv
+```C++
+folly::f14::detail::F14LinkCheck<(folly::f14::detail::F14IntrinsicsMode)1>::check()
+
+// folly/include/folly/container/detail/F14Table.h
+F14LinkCheck<getF14IntrinsicsMode()>::check();
+
+// folly/include/folly/container/detail/F14IntrinsicsAvailability.h
+static constexpr F14IntrinsicsMode getF14IntrinsicsMode() {
+#if !FOLLY_F14_VECTOR_INTRINSICS_AVAILABLE
+  return F14IntrinsicsMode::None;
+#elif !FOLLY_F14_CRC_INTRINSIC_AVAILABLE
+  return F14IntrinsicsMode::Simd;
+#else
+  return F14IntrinsicsMode::SimdAndCrc;
+#endif
+}
+
+// F14 has been implemented for SSE2 and NEON (so far)
+#if FOLLY_SSE >= 2 || FOLLY_NEON
+#define FOLLY_F14_VECTOR_INTRINSICS_AVAILABLE 1
+#else
+#define FOLLY_F14_VECTOR_INTRINSICS_AVAILABLE 0
+#pragma message                                                      \
+    "Vector intrinsics / F14 support unavailable on this platform, " \
+    "falling back to std::unordered_map / set"
+#endif
+
+#ifndef FOLLY_SSE
+# if defined(__SSE4_2__)
+#  define FOLLY_SSE 4
+#  define FOLLY_SSE_MINOR 2
+# elif defined(__SSE4_1__)
+#  define FOLLY_SSE 4
+#  define FOLLY_SSE_MINOR 1
+# elif defined(__SSE4__)
+#  define FOLLY_SSE 4
+#  define FOLLY_SSE_MINOR 0
+# elif defined(__SSE3__)
+#  define FOLLY_SSE 3
+#  define FOLLY_SSE_MINOR 0
+# elif defined(__SSE2__)
+#  define FOLLY_SSE 2
+#  define FOLLY_SSE_MINOR 0
+# elif defined(__SSE__)
+#  define FOLLY_SSE 1
+#  define FOLLY_SSE_MINOR 0
+# else
+#  define FOLLY_SSE 0
+#  define FOLLY_SSE_MINOR 0
+# endif
+#endif
+```
+
+## Fix 
+Step 1: Check available API:
+```Bash
+mkdir tmp
+cd tmp
+cp /path/to/libfolly.a .
+ar x libfolly.a
+readelf -sW F14Table.cpp.o | c++filt | grep F14LinkCheck
+     6: 0000000000000000     1 FUNC    GLOBAL DEFAULT    2 folly::f14::detail::F14LinkCheck<(folly::f14::detail::F14IntrinsicsMode)2>::check()
+# In this case F14IntrinsicsMode = 2
+```
+
+Step 2: Define required variables at compile time
+```C++
+# folly/include/folly/Portability.h
+#ifndef __SSE4_2__
+#define __SSE4_2__
+#endif
+```
