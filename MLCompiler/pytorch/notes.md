@@ -32,3 +32,48 @@ The computational graph in TorchScript is a static representation of the model's
 PyTorch model -> AOT Module with dynamic shapes -> TorchScript -> [Torch-MLIR + MHLO] -> MHLO
 
 # TORCH_LIBRARY macro
+
+# Dynamo Symbolic Symbol Logging
+```Python
+# /data00/home/son.nguyen/.pyenv/versions/3.9.0/lib/python3.9/site-packages/torch/fx/experimental/symbolic_shapes.py
+# export TORCHDYNAMO_EXTENDED_DEBUG_CREATE_SYMBOL=u5
+# The following changes help print out user code stack trace.
+    def _log_create_unbacked_symbol(
+        self,
+        prefix: str,
+        symbol: sympy.Symbol,
+        vr: ValueRanges,
+        source: Optional[Source] = None,
+        sym_node: Optional[SymNode] = None,
+    ) -> None:
+        is_debug = config.extended_debug_create_symbol is not None and str(
+            symbol
+        ) in config.extended_debug_create_symbol.split(",")
+        sloc: Union[str, SLoc]
+        sloc, maybe_extra_debug = self._get_stack_summary(is_debug)
+        # if source is None:
+        #     sloc, maybe_extra_debug = self._get_stack_summary(is_debug)
+        # else:
+        #     sloc, maybe_extra_debug = source.name(), ""
+        maybe_extra_debug = ""
+        log.info(
+            "%s %s [%s, %s] %s%s",
+            prefix,
+            symbol,
+            vr.lower,
+            vr.upper,
+            sloc,
+            maybe_extra_debug,
+            stack_info=is_debug,
+        )
+        trace_structured(
+            "create_unbacked_symbol",
+            metadata_fn=lambda: {
+                "symbol": str(symbol),
+                "node_id": id(sym_node),
+                "vr": f"[{vr.lower}, {vr.upper}]",
+                "user_stack": structured.get_user_stack(3),
+                "stack": "", # structured.get_framework_stack(),
+            },
+        )
+```

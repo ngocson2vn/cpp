@@ -6,6 +6,7 @@ export PYTHONPATH=/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/
 
 /usr/local/cuda-12.4/bin/nsys profile -o toy_model_profile \
   --force-overwrite true --trace=cuda,nvtx,osrt \
+  --capture-range-end=stop \
   --sample process-tree \
   --capture-range=cudaProfilerApi \
   --backtrace lbr \
