@@ -1,3 +1,70 @@
+# Table of Contents
+<!-- TOC START -->
+- [Call Stack](#call-stack)
+- [Flow](#flow)
+- [Inductor config](#inductor-config)
+- [Backend registration](#backend-registration)
+- [Debug](#debug)
+- [class _TorchCompileInductorWrapper](#class-_torchcompileinductorwrapper)
+- [_operator module](#_operator-module)
+- [class Interpreter](#class-interpreter)
+- [class GraphLowering(torch.fx.Interpreter)](#class-graphloweringtorchfxinterpreter)
+- [Inductor IR](#inductor-ir)
+- [class CUDACombinedScheduling(BaseScheduling)](#class-cudacombinedschedulingbasescheduling)
+- [class TritonScheduling(SIMDScheduling)](#class-tritonschedulingsimdscheduling)
+- [class TritonKernel(SIMDKernel[TritonCSEVariable])](#class-tritonkernelsimdkerneltritoncsevariable)
+- [How does Inductor perform fusion?](#how-does-inductor-perform-fusion)
+    - [Overview](#overview)
+    - [Key steps in Inductor’s fusion pipeline](#key-steps-in-inductors-fusion-pipeline)
+    - [What can and cannot be fused](#what-can-and-cannot-be-fused)
+    - [Example: elementwise chain fusion (GPU)](#example-elementwise-chain-fusion-gpu)
+    - [Why fusion improves performance](#why-fusion-improves-performance)
+    - [Practical notes](#practical-notes)
+- [Device Backend Registration](#device-backend-registration)
+- [Scheduler](#scheduler)
+- [How is a Triton kernel generated?](#how-is-a-triton-kernel-generated)
+- [How are torch.sum and torch.sigmoid fused?](#how-are-torchsum-and-torchsigmoid-fused)
+  - [scheduler.py](#schedulerpy)
+    - [Where fusion regions are constructed in scheduler.py](#where-fusion-regions-are-constructed-in-schedulerpy)
+    - [Entry point and iteration](#entry-point-and-iteration)
+    - [One fusion round: candidates → checks → merges](#one-fusion-round-candidates-checks-merges)
+      - [1) Candidate discovery and ordering](#1-candidate-discovery-and-ordering)
+      - [2) Legality and direction checks](#2-legality-and-direction-checks)
+      - [3) Profitability: benchmarkable speedup or heuristic score](#3-profitability-benchmarkable-speedup-or-heuristic-score)
+      - [4) Merge: produce a fused region node](#4-merge-produce-a-fused-region-node)
+    - [Supporting structures that define the fusion region’s semantics](#supporting-structures-that-define-the-fusion-regions-semantics)
+    - [Summary of fusion region construction](#summary-of-fusion-region-construction)
+  - [ir.Buffer](#irbuffer)
+    - [What is ir.Buffer?](#what-is-irbuffer)
+    - [Relationship to other IR and outputs](#relationship-to-other-ir-and-outputs)
+    - [How schedulers and fusion use Buffer](#how-schedulers-and-fusion-use-buffer)
+    - [Typical lifecycle](#typical-lifecycle)
+    - [What “storage” means here](#what-storage-means-here)
+    - [Variants and special cases](#variants-and-special-cases)
+  - [/data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/pattern_matcher.py](#data00homesonnguyenworkspacecppmlcompilerpytorchtorch_inductorpattern_matcherpy)
+  - [/data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/lowering.py](#data00homesonnguyenworkspacecppmlcompilerpytorchtorch_inductorloweringpy)
+  - [What is the PyTorch dispatcher?](#what-is-the-pytorch-dispatcher)
+    - [Why a dispatcher?](#why-a-dispatcher)
+    - [How it works (conceptually)](#how-it-works-conceptually)
+    - [Example flow](#example-flow)
+    - [Key pieces of the ecosystem](#key-pieces-of-the-ecosystem)
+    - [When you interact with it](#when-you-interact-with-it)
+    - [Benefits](#benefits)
+  - [log_ir_pre_fusion and log_ir_post_fusion](#log_ir_pre_fusion-and-log_ir_post_fusion)
+  - [Custom Pass](#custom-pass)
+  - [How does Inductor create the ComputedBuffer?](#how-does-inductor-create-the-computedbuffer)
+    - [Step-by-Step Creation Process](#step-by-step-creation-process)
+- [FX Graph Lowering Process](#fx-graph-lowering-process)
+  - [How is torch.ops.aten.add.Tensor lowered?](#how-is-torchopsatenaddtensor-lowered)
+  - [How does Scheduler fuse two SchedulerNode nodes?](#how-does-scheduler-fuse-two-schedulernode-nodes)
+  - [What is the programming model of a Triton kernel?](#what-is-the-programming-model-of-a-triton-kernel)
+  - [How does Scheduler codegen a Triton kernel?](#how-does-scheduler-codegen-a-triton-kernel)
+<!-- TOC END -->
+
+
+
+
+<br/><br/>
 # Call Stack
 ```Python
 Traceback (most recent call last):
@@ -881,6 +948,9 @@ class DefaultHandler(OpsHandler[Any]):
         warnings.warn(f"undefined OpHandler.{name}, please add missing op schema")
         return fallback
 
+# Register ops
+DefaultHandler._init_cls()
+
 # fn = ops_wrapper(name)
 # Flow: fn -> make_pointwise -> wrapper1(fn) -> register_lowering -> wrapper2(wrapper1(fn))
 
@@ -1055,5 +1125,65 @@ class SchedulerNode(BaseSchedulerNode):
         self._compute_attrs()
 
 # _compute_attrs(...)
+self._sizes, self._body = self.node.simplify_and_reorder(
+    extra_indexing_constraints=extra_indexing_constraints,
+    recompute_sizes_body_func=recompute_sizes_body_func,
+)
 
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/ir.py
+@ir_dataclass(frozen=False)
+class ComputedBuffer(OperationBuffer):
+    data: Loops
+
+    def simplify_and_reorder(
+        self,
+        extra_indexing_constraints: Optional[tuple[dict[Any, Any], list[Any]]] = None,
+        recompute_sizes_body_func: Optional[Callable[..., Any]] = None,
+    ) -> tuple[tuple[list[sympy.Expr], list[sympy.Expr]], LoopBody]:
+        """
+        This is a main place where we do loop transformations in a
+        backend-agnostic way.
+
+        Here we:
+            1) Remove any 1 dimensions
+            2) Fuse contiguous dimensions together
+            3) Reorder dimensions based on stride orders
+
+        Optional argument extra_indexing_constraints can be used to append additional
+        indexing expressions to existing ones derived from buffer's body. This can be useful
+        to fuse scheduler nodes with compatible ranges, e.g. (s0*s1*...,) and (s0, s1, s2, ...)
+        on CPU by preventing indexing simplifications and obtaining index/reduce ranges for
+        the scheduler node compatible with other nodes.
+        Optional argument recompute_sizes_body_func can be used to recompute sizes and body
+        on the default body. This can be useful to append additional loop transformations.
+        """
+        (
+            (index_size, reduce_size),
+            body,
+            (index_vars, reduce_vars),
+        ) = self.get_default_sizes_body()
+
+# get_default_sizes_body()
+args = [(q0,), (q1,)]
+var_ranges = {q0: 3, q1: 9}
 ```
+
+## How does Scheduler fuse two SchedulerNode nodes?
+```Python
+class Scheduler: 
+  fuse_nodes(nodes):
+    fuse_nodes_once(nodes):
+      get_possible_fusions(nodes):
+```
+
+
+## What exactly is the programming model of a Triton kernel?
+
+## How does Scheduler codegen a Triton kernel?
+
+## Create a custom fusion algo to fuse independent SchedulerNode nodes into a CustomFusedSchedulerNode
+
+## Create a custom codegen to generate a Triton kernel for a CustomFusedSchedulerNode
+
+## How to fuse two FusedSchedulerNode nodes?
+fuse(producer, consumer)

@@ -42,6 +42,11 @@ export PIP_BREAK_SYSTEM_PACKAGES=1
 pip3 install/uninstall PACKAGE_NAME
 ```
 
+# Ignore Python version requirement
+```Bash
+pip3 install --user numpy --ignore-requires-python
+```
+
 # Function representation
 <function make_pointwise.<locals>.inner at 0x7fb9f4eb6d40>
 This tells you: “This is a function named `inner`, defined locally inside `make_pointwise`, and this specific function object currently lives at memory address 0x7fb9f4eb6d40.”

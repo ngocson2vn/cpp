@@ -122,6 +122,7 @@
             "program": "${workspaceRoot}/MLCompiler/pytorch/test_inductor.py",
             "cwd": "${workspaceRoot}/MLCompiler/pytorch",
             "env": {
+                "VSCODE_MODE": "true",
                 "PYTHONPATH": "/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python",
                 "LD_LIBRARY_PATH": "/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CUPTI/lib64",
                 "TORCHINDUCTOR_ENABLE_INFERENCE_FX_PASS": "1"

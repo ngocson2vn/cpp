@@ -1,0 +1,15 @@
+Regarding PyTorch Inductor Scheduler, please research the following source code files
+1. Inductor IR: https://github.com/pytorch/pytorch/blob/v2.7.1/torch/_inductor/ir.py
+2. Inductor Scheduler: https://github.com/pytorch/pytorch/blob/v2.7.1/torch/_inductor/scheduler.py
+
+
+Then, please carry out the following tasks:
+1. Please explain the method Scheduler._init(self, nodes: list[ir.Operation]) as details as possible.
+
+2. Apply the method Scheduler._init(self, nodes: list[ir.Operation]) on nodes lowered from the following FX graph:
+ graph():
+    %arg0_1 : [num_users=1] = placeholder[target=arg0_1]
+    %arg1_1 : [num_users=1] = placeholder[target=arg1_1]
+    %add : [num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%arg0_1, %arg1_1), kwargs = {})
+    %sum_1 : [num_users=1] = call_function[target=torch.ops.aten.sum.dim_IntList](args = (%add, [1]), kwargs = {})
+    return (sum_1,)

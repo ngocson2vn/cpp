@@ -1,17 +1,27 @@
 import os
+import shutil
 
+debug_dir = "./debug"
+
+if os.getenv("VSCODE_MODE", "false") == "true" and os.path.exists(debug_dir):
+  shutil.rmtree(debug_dir)
+  print(f"Cleaned {debug_dir}")
+
+# """
 os.environ["TORCH_LOGS"] = "+dynamo"
 os.environ["TORCHDYNAMO_VERBOSE"] = "1"
 
 # Enable IR dumping for Inductor
 os.environ["TORCH_COMPILE_DEBUG"] = "1"
-os.environ["TORCH_COMPILE_DEBUG_DIR"] = "./debug"
-os.environ["DYNAMO_CKPT_PATH"] = "./debug/aot"
-os.environ['TORCHINDUCTOR_CACHE_DIR'] = "./debug/aot"
+os.environ["TORCH_COMPILE_DEBUG_DIR"] = debug_dir
+os.environ["DYNAMO_CKPT_PATH"] = f"{debug_dir}/aot"
+os.environ['TORCHINDUCTOR_CACHE_DIR'] = f"{debug_dir}/aot/inductor"
 os.environ["INDUCTOR_POST_FUSION_SVG"] = "1"
 os.environ["INDUCTOR_ORIG_FX_SVG"] = "1"
 os.environ["TORCHINDUCTOR_PROLOGUE_FUSION"] = "1"
 os.environ["TORCHINDUCTOR_DEBUG_FUSION"] = "1"
+os.environ["TORCHDYNAMO_COMPILE_DYNAMIC_SHAPE"] = "1"
+# """
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -41,28 +51,32 @@ class ToyModule(nn.Module):
   #   res = torch.sigmoid(logit)
   #   return res
 
-  def forward(self, x, y):
-    z = x + y
-    logit = torch.sum(z, 1)
-    res = torch.sigmoid(logit)
+  # def forward(self, x, y):
+  #   tmp0 = torch.add(x, y)
+  #   tmp1 = torch.sum(tmp0, 1)
+
+  #   tmp2 = torch.sigmoid(tmp1)
+  #   return tmp2
+  #   # tmp3 = torch.sum(tmp2, 0)
+
+  #   # tmp4 = torch.sigmoid(tmp3)
+  #   # return tmp4
+
+  def forward(self, x: torch.Tensor, y: torch.Tensor):
+    tmp0 = y.transpose(-2, -1)
+    tmp1 = torch.matmul(x, tmp0)
+    res = torch.sigmoid(tmp1)
     return res
 
 toy = ToyModule()
-x = torch.rand(3, 9).cuda()
-y = torch.rand(3, 9).cuda()
 
-# pdb.set_trace()
-res = toy(x, y)
-print(f"Result: {res}")
+if __name__ == "__main__":
+  x1 = torch.rand(9, 9).cuda()
+  y1 = torch.rand(9, 9).cuda()
+  res1 = toy(x1, y1)
+  print(f"Result: {res1}")
 
-if os.environ.get("PERF_MODE") == "true":
-  torch.cuda.profiler.start() # start profiling
-  for i in range(50):
-    if i < 3:
-      torch.cuda.nvtx.range_push(f"warmup{i}")
-    else:
-      torch.cuda.nvtx.range_push(f"infer{i-3}")
-    res = toy(x, y)
-    torch.cuda.nvtx.range_pop()
-  torch.cuda.profiler.stop() # end profiling
-  print(f"Result: {res}")
+  x2 = torch.rand(128, 9).cuda()
+  y2 = torch.rand(128, 9).cuda()
+  res2 = toy(x2, y2)
+  print(f"Result: {res2}")

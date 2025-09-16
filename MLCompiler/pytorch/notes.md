@@ -33,7 +33,91 @@ PyTorch model -> AOT Module with dynamic shapes -> TorchScript -> [Torch-MLIR + 
 
 # TORCH_LIBRARY macro
 
-# Dynamo Symbolic Symbol Logging
+# Dynamo
+## Save Compiled Code
+```Python
+# torch/_dynamo/convert_frame.py
+#   _compile -> transform
+save_guards = []
+for g in output.guards.inner:
+    #FIXME(tc): only save the guards for check batchsize
+    if not dynamo_ckpt._dynamic_mode and "feed_tensors['sample_rate']" in str(g) and "TENSOR_MATCH" in str(g.create_fn):
+        save_guards.append(g)
+dynamo_ckpt.dill_save(save_guards, "__output_guards")
+dynamo_ckpt.dill_save(list(output.global_scope.keys()), "__output_global_scope_keys")
+dynamo_ckpt.dynamic_dill_save(output.input_source_to_sizes_strides, "__output_input_source_to_sizes_strides")
+dynamo_ckpt.dill_save(output.code_options, "__output_code_options")
+
+instructions[:] = output.output_instructions
+code_options.update(output.code_options)
+propagate_inst_exn_table_entries(instructions)
+check_inst_exn_tab_entries_valid(instructions)
+instructions[:] = remove_pointless_jumps(remove_dead_code(instructions))
+
+for name, compiled_fn_value in output.compiled_funcs.items():
+    try:
+        dynamo_ckpt.dill_save(compiled_fn_value.__closure__[0].cell_contents.__self__, name)
+    except:
+        dynamo_ckpt.dill_save(compiled_fn_value, name)
+```
+
+## Load Compiled Code
+```Python
+# torch/_dynamo/convert_frame.py
+# _compile -> custom_transform
+output=OutputGraph(
+    code_options,
+    compiler_fn,
+    None,
+    export,
+    export_constraints,
+    frame_state,
+    local_scope=locals,
+    global_scope=globals,
+    f_code=code,
+    torch_function_mode_stack=tf_mode_stack,
+)
+_g_co_index += 1
+print(f"\n=== Load and run code part {_g_co_index} ===")
+#====================================================================
+# Note: load dill files with suffix _1 to support dynamic shapes
+# For example, __output_code_options_1.dill
+#====================================================================
+output.code_options = dynamo_ckpt.load("__output_code_options")
+output.input_source_to_sizes_strides = dynamo_ckpt.load("__output_input_source_to_sizes_strides")
+loaded_guards = dynamo_ckpt.load("__output_guards")
+output.guards.update(loaded_guards)
+# FIX: NameError: name '__compiled_fn_0' is not defined
+from torch._dynamo.device_interface import init_device_reg
+init_device_reg()
+for co_name in output.code_options["co_names"]:
+    if not dynamo_ckpt.exists(co_name):
+        continue
+    this_compiled_fn = torch._dynamo.disable(dynamo_ckpt.load(co_name))
+    output.install_global_unsafe(co_name, this_compiled_fn)
+    print(f"  > Loaded `{co_name}`")
+
+output.install_builtins_dict_in_fglobals()
+
+global_keys = dynamo_ckpt.load("__output_global_scope_keys")
+for key in global_keys:
+    if key in output.global_scope:
+        continue
+    real_module_name = key.replace("_dot_", ".").replace("__import_", "")
+    try:
+        value = importlib.import_module(real_module_name)
+        output.global_scope[key] = value
+        output.update_co_names(key)
+        # print(f"  > Imported lib `{real_module_name}`")
+    except Exception as e:
+        # print("Skip import lib `{}` due to error `{}`".format(real_module_name, e))
+        pass
+instructions[:] = dynamo_ckpt.load("__instructions")
+code_options.update(dynamo_ckpt.load("__code_options"))
+print("=== Finished loading dynamo checkpoint ===")
+```
+
+## Dynamo Symbolic Symbol Logging
 ```Python
 # /data00/home/son.nguyen/.pyenv/versions/3.9.0/lib/python3.9/site-packages/torch/fx/experimental/symbolic_shapes.py
 # export TORCHDYNAMO_EXTENDED_DEBUG_CREATE_SYMBOL=u5

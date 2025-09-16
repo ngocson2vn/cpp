@@ -5,7 +5,7 @@ Python 3.11.2
 
 # torch
 pip install torch 
-pip install pydot ipdb
+pip install pydot matplotlib ipdb
 sudo apt-get install -y graphviz cmake ccache
 
 # openai triton
