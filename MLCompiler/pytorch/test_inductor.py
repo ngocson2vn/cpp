@@ -51,22 +51,21 @@ class ToyModule(nn.Module):
   #   res = torch.sigmoid(logit)
   #   return res
 
-  # def forward(self, x, y):
-  #   tmp0 = torch.add(x, y)
-  #   tmp1 = torch.sum(tmp0, 1)
+  def forward(self, x, y):
+    tmp0 = torch.add(x, y)
+    tmp1 = torch.sum(tmp0, 1)
 
-  #   tmp2 = torch.sigmoid(tmp1)
-  #   return tmp2
-  #   # tmp3 = torch.sum(tmp2, 0)
+    tmp2 = torch.sigmoid(tmp1)
+    tmp3 = torch.sum(tmp2, 0)
 
-  #   # tmp4 = torch.sigmoid(tmp3)
-  #   # return tmp4
+    tmp4 = torch.sigmoid(tmp3)
+    return tmp4
 
-  def forward(self, x: torch.Tensor, y: torch.Tensor):
-    tmp0 = y.transpose(-2, -1)
-    tmp1 = torch.matmul(x, tmp0)
-    res = torch.sigmoid(tmp1)
-    return res
+  # def forward(self, x: torch.Tensor, y: torch.Tensor):
+  #   tmp0 = y.transpose(-2, -1)
+  #   tmp1 = torch.matmul(x, tmp0)
+  #   res = torch.sigmoid(tmp1)
+  #   return res
 
 toy = ToyModule()
 
