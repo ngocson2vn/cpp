@@ -17,3 +17,8 @@ pip install -e .
 cd triton
 pip3.11 install -r python/requirements.txt
 pip3.11 install -e python/
+
+# Install cutlass
+pip3.11 install cuda-python==12.4.0
+pip3.11 install nvidia-cutlass
+# cutlass templates will be installed to `site-packages/cutlass_library/`
