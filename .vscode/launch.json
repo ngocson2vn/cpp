@@ -129,6 +129,34 @@
             }
         },
         {
+            "name": "Debug BMM Fusion",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceRoot}/MLCompiler/pytorch/inductor_bmm_fusion.py",
+            "cwd": "${workspaceRoot}/MLCompiler/pytorch",
+            "justMyCode": false,
+            "env": {
+                "VSCODE_MODE": "true",
+                "PYTHONPATH": "/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python",
+                "LD_LIBRARY_PATH": "/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CUPTI/lib64",
+                "TORCHINDUCTOR_ENABLE_INFERENCE_FX_PASS": "1"
+            }
+        },
+        {
+            "name": "Debug Scheduler Fusion",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceRoot}/MLCompiler/pytorch/inductor_fusion_codegen1.py",
+            "cwd": "${workspaceRoot}/MLCompiler/pytorch",
+            "justMyCode": false,
+            "env": {
+                "VSCODE_MODE": "true",
+                "PYTHONPATH": "/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python",
+                "LD_LIBRARY_PATH": "/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CUPTI/lib64",
+                "TORCHINDUCTOR_ENABLE_INFERENCE_FX_PASS": "1"
+            }
+        },
+        {
             "name": "Debug Run Compiled Model",
             "type": "debugpy",
             "request": "launch",

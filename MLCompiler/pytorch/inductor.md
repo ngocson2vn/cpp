@@ -54,12 +54,18 @@
   - [Custom Pass](#custom-pass)
   - [How does Inductor create the ComputedBuffer?](#how-does-inductor-create-the-computedbuffer)
     - [Step-by-Step Creation Process](#step-by-step-creation-process)
+- [How are symbolic variables created?](#how-are-symbolic-variables-created)
 - [FX Graph Lowering Process](#fx-graph-lowering-process)
-  - [How is torch.ops.aten.add.Tensor lowered?](#how-is-torchopsatenaddtensor-lowered)
-  - [How does Scheduler fuse two SchedulerNode nodes?](#how-does-scheduler-fuse-two-schedulernode-nodes)
-  - [What is the programming model of a Triton kernel?](#what-is-the-programming-model-of-a-triton-kernel)
-  - [How does Scheduler codegen a Triton kernel?](#how-does-scheduler-codegen-a-triton-kernel)
+  - [Step 1: Run FX graph to lower aten ops to Inductor IR](#step-1-run-fx-graph-to-lower-aten-ops-to-inductor-ir)
+    - [How is torch.ops.aten.add.Tensor lowered?](#how-is-torchopsatenaddtensor-lowered)
+  - [Step 2: Fuse ir.Buffer nodes](#step-2-fuse-irbuffer-nodes)
+    - [How does Scheduler fuse two SchedulerNode nodes?](#how-does-scheduler-fuse-two-schedulernode-nodes)
+      - [Understand the following IR:](#understand-the-following-ir)
+      - [Completely understand `class op1461_loop_body` and `def body(self, ops)`](#completely-understand-class-op1461_loop_body-and-def-bodyself-ops)
+  - [Step 3: Codegen FusedSchedulerNode nodes](#step-3-codegen-fusedschedulernode-nodes)
+    - [How is the following IR lowered to a Triton kernel?](#how-is-the-following-ir-lowered-to-a-triton-kernel)
 <!-- TOC END -->
+
 
 
 
@@ -152,7 +158,7 @@ Dynamo -> FX graph -> Inductor
     │                      │
     │                      └─> Lower aten ops to Inductor IR ops
     │                      │
-    │                      └─> Kernel Fusion |-> Codegen Triton Kernels
+    │                      └─> Kernel Fusion -> Codegen Triton Kernels
     │                      │
     │                      └─> Codegen Python Wrapper Code including Triton kernels and calls to Triton kernels 
     │                      │
@@ -352,6 +358,71 @@ In short, Inductor fuses by building loop-based fusion groups that inline compat
 # provide flexibility to the backend. A backend can choose to implement these classes from scratch,
 # or reuse them by extending and overriding as necessary. And Inductor provides the registration API,
 # register_backend_for_device, to equip a new backend at runtime.
+
+def register_backend_for_device(
+    device: str,
+    device_scheduling: SchedulingConstructor,
+    device_wrapper_codegen: WrapperConstructor,
+    device_cpp_wrapper_codegen: Optional[WrapperConstructor] = None,
+) -> None:
+    device_codegens[device] = DeviceCodegen(
+        device_scheduling, device_wrapper_codegen, device_cpp_wrapper_codegen
+    )
+
+# For the case device = 'cuda':
+# CUDACombinedScheduling combines Triton and CUDA C++ scheduling for CUDA devices via delegation
+cuda_backends = {
+    "triton": CUDACombinedScheduling,
+    "halide": HalideScheduling,
+}
+register_backend_for_device(
+    "cuda",
+    lambda scheduling: cuda_backends[config.cuda_backend](scheduling),
+    PythonWrapperCodegen,
+    CppWrapperGpu,
+)
+# Where, 
+# - config.cuda_backend = 'triton'
+
+# - scheduling is a Scheduler object
+# At codegen phase, device_scheduling will be constructed as follows:
+# MLCompiler/pytorch/torch/_inductor/scheduler.py
+class Scheduler:
+    def create_backend(self, device: torch.device) -> BaseScheduling:
+        assert not is_gpu(device.type) or device.index is not None, (
+            f"{device} should have been normalized in lowering"
+        )
+        V.graph.add_device_info(device)
+
+        device_scheduling = get_scheduling_for_device(device.type)
+        if device_scheduling is None:
+            raise RuntimeError(f"Unsupported device type: {device.type}")
+
+        if not has_triton():
+            if (
+                device.type == "cuda"
+                and (device_props := torch.cuda.get_device_properties(device)).major < 7
+            ):
+                raise GPUTooOldForTriton(device_props, inspect.currentframe())
+            elif is_gpu(device.type) and not device.type == "mps":
+                raise TritonMissing(inspect.currentframe())
+
+        return device_scheduling(self)
+
+    def get_backend(self, device: Optional[torch.device]) -> BaseScheduling:
+        assert device is not None
+        if device not in self.backends:
+            self.backends[device] = self.create_backend(device)
+        return self.backends[device]
+
+    def _codegen(self, nodes: list[BaseSchedulerNode]) -> None:
+            if node.is_template():
+                prologue, template_node, epilogue = node.get_prologue_template_epilogue(
+                    list(node.get_nodes())
+                )
+                self.get_backend(device).codegen_template(
+                    template_node, epilogue, prologue
+                )
 ```
 
 # Scheduler
@@ -829,9 +900,41 @@ By creating a `ComputedBuffer` with a combined `inner_fn`, Inductor describes a 
 
 
 # How are symbolic variables created?
+```Python
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/fx/experimental/symbolic_shapes.py
+@record_shapeenv_event()
+def create_symbol(...):
+    if val in (0, 1) and specialize_zero_one:
+        r = self.val_to_var[val]
+    elif not duck or val not in self.val_to_var:
+        # If we're not duck shaping, we always create a new symbol
+        # Even if we're duck shaping, if we haven't seen this particular
+        # value before, we also create a new symbol
+        if type(val) is int or is_nested_int(val):
+            sympy_expr = make_symbol(
+                SymT.SIZE, len(self.var_to_val), positive=positive, integer=True
+            )
+        else:
+            sympy_expr = make_symbol(
+                SymT.FLOAT, len(self.var_to_val), positive=positive, real=True
+            )
+        self.source_to_var[source_name] = sympy_expr
+        # We always associate vars to vals
+        if isinstance(val, int):
+            self.var_to_val[sympy_expr] = sympy.Integer(val)
+        elif isinstance(val, float):
+            self.var_to_val[sympy_expr] = sympy.Float(val)
+        else:
+            # Only used for jagged layout nested tensors
+            self.var_to_val[sympy_expr] = SingletonInt(
+                val.node.nested_int(), coeff=val.node.nested_int_coeff()
+            )
+```
+
 
 
 # FX Graph Lowering Process
+## Step 1: Run FX graph to lower aten ops to Inductor IR
 ```Python
 # /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/compile_fx.py
 with V.set_graph_handler(graph):
@@ -846,7 +949,7 @@ graph():
   return (sigmoid,)
 ```
 
-## How is torch.ops.aten.add.Tensor lowered?
+### How is torch.ops.aten.add.Tensor lowered?
 V0828 04:36:42.229000 3516361 site-packages/torch/_inductor/graph.py:1455] [0/0] lowering %add : [num_users=1] = call_function[target=torch.ops.aten.add.Tensor](args = (%arg0_1, %arg1_1), kwargs = {}) 
 V0828 04:36:42.229000 3516361 site-packages/torch/_inductor/graph.py:1181] [0/0]   via <function make_pointwise.<locals>.inner at 0x7fdf6a70b100>
 ```Python
@@ -1071,6 +1174,34 @@ class TensorBox(MutableBox):
 
 # TensorBox objects are realized to Buffer nodes
 
+#
+# Output
+#
+# A list of ir.Buffer nodes
+```
+
+## Step 2: Fuse ir.Buffer nodes
+```Python
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/graph.py
+class GraphLowering(torch.fx.Interpreter):
+    def _update_scheduler(self) -> None:
+        """
+        (Re)initializes the scheduler member.  When initializing the scheduler, no CUBIN
+        files should be generated (to avoid biasing any benchmarks and pessimizing
+        fusion decisions).
+        """
+        from .scheduler import Scheduler
+
+        with config.patch("triton.store_cubin", False):
+            self.scheduler = Scheduler(self.operations)
+
+    def codegen(self) -> tuple[ValueWithLineMap, ValueWithLineMap]:
+        with dynamo_timed("GraphLowering.codegen", log_pt2_compile_event=True):
+            self.init_wrapper_code()
+
+            self._update_scheduler() # Fusion happens here
+            V.debug.draw_orig_fx_graph(self.orig_gm, self.scheduler.nodes)
+
 #================================================================================================================================================================================
 # 2. Scheduler
 #================================================================================================================================================================================
@@ -1171,8 +1302,7 @@ args = [(q0,), (q1,)]
 var_ranges = {q0: 3, q1: 9}
 ```
 
-
-# How does Scheduler fuse two SchedulerNode nodes?
+### How does Scheduler fuse two SchedulerNode nodes?
 Must really understand Scheduler IR
 ```Python
 class Scheduler: 
@@ -1181,12 +1311,121 @@ class Scheduler:
       get_possible_fusions(nodes):
 ```
 
+#### Understand the following IR:
+```
+op1461: SchedulerNode(ComputedBuffer)
+op1461.writes = [MemoryDep('buf1461', c0, {c0: 7936*s0})]
+op1461.unmet_dependencies = [   MemoryDep('buf1460', 7936*c0 + 64*c1 + 1984*c2 + c3, {c0: s0, c1: 31, c2: 4, c3: 64})]
+op1461.met_dependencies = []
+op1461.outputs = [
+    buf1461: ComputedBuffer
+    buf1461.layout = FixedLayout('cuda:0', torch.float16, size=[s0, 31, 4, 64], stride=[7936, 256, 64, 1])
+    buf1461.users = [NodeUser(node=ExternKernelSchedulerNode(name='op1462'), can_inplace=False, is_weak=False)]
+]
+op1461.group.device = cuda:0
+op1461.group.iteration = (7936*s0, 1)
+op1461.sizes = ([s0, 31, 4, 64], [])
+buf1460_layout = FixedLayout('cuda:0', torch.float16, size=[4*s0, 31, 64], stride=[1984, 64, 1])
+buf1461_layout = FixedLayout('cuda:0', torch.float16, size=[s0, 31, 4, 64], stride=[7936, 256, 64, 1])
+class op1461_loop_body:
+    var_ranges = {p0: s0, p1: 31, p2: 4, p3: 64}
+    index0 = 7936*p0 + 64*p1 + 1984*p2 + p3
+    index1 = 7936*p0 + 256*p1 + 64*p2 + p3
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('buf1460', get_index)
+        get_index_1 = self.get_index('index1')
+        store = ops.store('buf1461', get_index_1, load, None)
+        return store
+```
 
-# How does Scheduler codegen a Triton kernel?
-What exactly is the programming model of a Triton kernel? <br/>
-- Each Triton kernel has a constexpr blockSize parameter which must be specified at compile time
-- Each Triton kernel instance operates on a block of data. All operations are vectorize-wise.
+#### Completely understand `class op1461_loop_body` and `def body(self, ops)`
+Perform operations on 1 element
 
 
-# How to fuse more nodes?
-fuse(producer, consumer)
+## Step 3: Codegen FusedSchedulerNode nodes
+```Python
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/graph.py
+class GraphLowering(torch.fx.Interpreter):
+    def _update_scheduler(self) -> None:
+        """
+        (Re)initializes the scheduler member.  When initializing the scheduler, no CUBIN
+        files should be generated (to avoid biasing any benchmarks and pessimizing
+        fusion decisions).
+        """
+        from .scheduler import Scheduler
+
+        with config.patch("triton.store_cubin", False):
+            self.scheduler = Scheduler(self.operations)
+
+    def codegen(self) -> tuple[ValueWithLineMap, ValueWithLineMap]:
+        with dynamo_timed("GraphLowering.codegen", log_pt2_compile_event=True):
+            self.init_wrapper_code()
+
+            # Fusion happens here
+            self._update_scheduler()
+            V.debug.draw_orig_fx_graph(self.orig_gm, self.scheduler.nodes)
+
+            # Codegen
+            self.wrapper_code.push_codegened_graph(self)
+            self.scheduler.codegen()
+
+```
+
+### How is the following IR lowered to a Triton kernel?
+```
+op0_op1: FusedSchedulerNode(SchedulerNode,SchedulerNode)
+op0_op1.writes = [MemoryDep('buf0', c0, {c0: s0*s1}), MemoryDep('buf1', c0, {c0: s0*s1})]
+op0_op1.unmet_dependencies = []
+op0_op1.met_dependencies = [MemoryDep('arg1_1', c0, {c0: 9*s0}), MemoryDep('arg3_1', c0, {c0: 9*s1})]
+op0_op1.outputs = [
+    buf0: MultiTemplateBuffer
+    buf0.layout = FixedLayout('cuda:0', torch.float32, size=[s1, s0], stride=[s0, 1])
+    buf0.users = [NodeUser(node=SchedulerNode(name='op1'), can_inplace=True, is_weak=False)]
+    buf1: ComputedBuffer
+    buf1.layout = FixedLayout('cuda:0', torch.float32, size=[s1, s0], stride=[s0, 1])
+    buf1.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op0_op1.snodes[0] =
+op0: SchedulerNode(MultiTemplateBuffer)
+op0.writes = [MemoryDep('buf0', c0, {c0: s0*s1})]
+op0.unmet_dependencies = []
+op0.met_dependencies = [MemoryDep('arg1_1', c0, {c0: 9*s0}), MemoryDep('arg3_1', c0, {c0: 9*s1})]
+op0.outputs = [
+    buf0: MultiTemplateBuffer
+    buf0.layout = FixedLayout('cuda:0', torch.float32, size=[s1, s0], stride=[s0, 1])
+    buf0.users = [NodeUser(node=SchedulerNode(name='op1'), can_inplace=True, is_weak=False)]
+]
+op0.group.device = cuda:0
+op0.group.iteration = (s0*s1, 1)
+op0.sizes = ([s1, s0], ())
+arg3_1_layout = FixedLayout('cuda:0', torch.float32, size=[s1, 9], stride=[9, 1])
+arg1_1_layout = FixedLayout('cuda:0', torch.float32, size=[9, s0], stride=[s0, 1])
+buf0_layout = FixedLayout('cuda:0', torch.float32, size=[s1, s0], stride=[s0, 1])
+op0_op1.snodes[1] =
+op1: SchedulerNode(ComputedBuffer)
+op1.writes = [MemoryDep('buf1', c0, {c0: s0*s1})]
+op1.unmet_dependencies = [MemoryDep('buf0', c0, {c0: s0*s1})]
+op1.met_dependencies = []
+op1.outputs = [
+    buf1: ComputedBuffer
+    buf1.layout = FixedLayout('cuda:0', torch.float32, size=[s1, s0], stride=[s0, 1])
+    buf1.users = [NodeUser(node=OUTPUT, can_inplace=False, is_weak=False)]
+]
+op1.group.device = cuda:0
+op1.group.iteration = (s0*s1, 1)
+op1.sizes = ([s0*s1], [])
+buf0_layout = FixedLayout('cuda:0', torch.float32, size=[s1, s0], stride=[s0, 1])
+buf1_layout = FixedLayout('cuda:0', torch.float32, size=[s1, s0], stride=[s0, 1])
+class op1_loop_body:
+    var_ranges = {p0: s0*s1}
+    index0 = p0
+    def body(self, ops):
+        get_index = self.get_index('index0')
+        load = ops.load('buf0', get_index)
+        sigmoid = ops.sigmoid(load)
+        get_index_1 = self.get_index('index0')
+        store = ops.store('buf1', get_index_1, sigmoid, None)
+        return store
+
+```
