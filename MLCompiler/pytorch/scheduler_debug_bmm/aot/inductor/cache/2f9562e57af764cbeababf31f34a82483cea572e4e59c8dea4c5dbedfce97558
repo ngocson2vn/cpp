@@ -1,0 +1,18 @@
+{
+    "system": {
+        "device": {
+            "name": "NVIDIA A10"
+        },
+        "version": {
+            "triton": "3.2.03f484c2377b8e5c17b3f36126bd353206247e89f2b93720cedc91c7f8529ffa6-83cd0eef733233d69c83b5cd7dc1e0aeae88e1b36011de7f2d8ee0629def3ec1-3f484c2377b8e5c17b3f36126bd353206247e89f2b93720cedc91c7f8529ffa6-23d635e690d670bf61798e1259674b78c0ed5ba222ab6a455f329f27a758fc2d-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-2598a211b07d5b0b37b6353a297af274ab6539023b4ae93e99360f95a7dad109-417ffa3f51a8f5a8dd947662e07bf79c2b5d1f20c0ea8f3f94cdcd327947d669-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-411af193818c1493b4ef52e071201da6f2cb828a6524a1678100cb8c7729c0a8-1a88d9e6d23229904218ea054e177eae800b927e3a7aaa1d4631cc6bffbed018-0df84413be155cfd392216d7eadac6e965ac3240dbae81b7393eb6725a5163a0-6e4a7df0c1f6cb799f488ee1d6efd3df754fc18aac6e7209923bb022c36c7c4e-6bd038079b94067d628eea9264530fec03d4d7027ff834e89b9d6fbc31ae8bd9-5d15c5bebef8d7aa51b21fd187e5faa95eba4a213254355bc69e0648013599f7-26a8aeaf21e759191f173b578316e243ad970387442a1b238481c6a1b2eecdc4-170b6c22d072485ef44734b7a8c2ab95c771ce78c5a26e890f8d103acfd17cd5-72bc1771d8b160fbafcd5390d1ee6cb72440c10ad4834451465a9e93b42f5d1c-7b506c955ee5646862dae548968e6523d75c37ad4750c214d9ab0f6918ecc88a-89e4844782de5fdff4868ac2846514570a6e280a6b92e91af2e180904043c833-115ada51f797cd098ddc5e4b95e8369a885571b15639694b6801f59e46eab55e-0e48b5e1e95136642ccfe62dc3d0a739a2c20a7b5ee13e9c23c6cecd68cdeb70-2e4af7e3ca937a7dd4c7207eb6ee3f8f7ebc2f30912b52a7204eeac040bd2a0f-b3aeb8ae6cb1e94085254a3c33612134752c72444ec219965dd7fa52e010a762-c89868706a4edff5f861293d19345031a95b843b7b7a1f523b30ead360e3837e-34ca3a350389b7cd59c72f6cf94f68e319a0e4394a858d381fb59344a7cc052e",
+            "cuda": "12.4"
+        },
+        "hash": "2f9562e57af764cbeababf31f34a82483cea572e4e59c8dea4c5dbedfce97558"
+    },
+    "cache": {
+        "base mm time: ((torch.Size([3, 31, 64]), (1984, 64, 1), torch.float32), (torch.Size([3, 64, 64]), (4096, 64, 1), torch.float32), None, None, <OpOverloadPacket(op='aten.bmm')>, None, True)": 0.03468799963593483,
+        "((torch.Size([3, 31, 64]), (1984, 64, 1), torch.float32), (torch.Size([3, 64, 64]), (4096, 64, 1), torch.float32), 'exclude_pad:False', 'exclude_pad:False', <OpOverloadPacket(op='aten.bmm')>, None, True)": false,
+        "base mm time: ((torch.Size([32, 31, 64]), (1984, 64, 1), torch.float32), (torch.Size([32, 64, 64]), (4096, 64, 1), torch.float32), None, None, <OpOverloadPacket(op='aten.bmm')>, None, True)": 0.03379200026392937,
+        "((torch.Size([s0, 31, 64]), (1984, 64, 1), torch.float32), (torch.Size([s0, 64, 64]), (4096, 64, 1), torch.float32), 'exclude_pad:False', 'exclude_pad:False', <OpOverloadPacket(op='aten.bmm')>, None, True)": false
+    }
+}

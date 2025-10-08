@@ -1,0 +1,117 @@
+Step 1: torchdynamo start tracing forward /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:48
+TRACE starts_line /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:48 in forward (ToyModule.forward)
+      def forward(self, x: torch.Tensor, y: torch.Tensor):
+TRACE RESUME 0 []
+TRACE starts_line /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:49 in forward (ToyModule.forward)
+        tmp1 = torch.bmm(x, y)
+TRACE LOAD_GLOBAL torch []
+TRACE LOAD_ATTR bmm [NullVariable, PythonModuleVariable(<module 'torch' from '/data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/__init__.py'>)]
+TRACE LOAD_FAST x [NullVariable, TorchInGraphFunctionVariable(<built-in method bmm of type object at 0x7f0919b65160>, nonstrict_traceable=False)]
+TRACE LOAD_FAST y [NullVariable, TorchInGraphFunctionVariable(<built-in method bmm of type object at 0x7f0919b65160>, nonstrict_traceable=False), LazyVariableTracker()]
+TRACE PRECALL 2 [NullVariable, TorchInGraphFunctionVariable(<built-in method bmm of type object at 0x7f0919b65160>, nonstrict_traceable=False), LazyVariableTracker(), LazyVariableTracker()]
+TRACE CALL 2 [NullVariable, TorchInGraphFunctionVariable(<built-in method bmm of type object at 0x7f0919b65160>, nonstrict_traceable=False), LazyVariableTracker(), LazyVariableTracker()]
+wrap_to_fake L['y'] (3, 64, 64) StatefulSymbolicContext(dynamic_sizes=[<DimDynamic.STATIC: 2>, <DimDynamic.STATIC: 2>, <DimDynamic.STATIC: 2>], dynamic_strides=[<DimDynamic.INFER_STRIDE: 4>, <DimDynamic.INFER_STRIDE: 4>, <DimDynamic.INFER_STRIDE: 4>], constraint_sizes=[None, None, None], constraint_strides=[None, None, None], view_base_context=None, tensor_source=LocalSource(local_name='y', is_input=True, dynamism=None, is_derefed_cell_contents=False), shape_env_to_source_to_symbol_cache={}) <class 'torch.Tensor'>
+create_graph_input L_y_ L['y'] FakeTensor(..., device='cuda:0', size=(3, 64, 64)) at debug_level 0 before=False
+wrap_to_fake L['x'] (3, 31, 64) StatefulSymbolicContext(dynamic_sizes=[<DimDynamic.STATIC: 2>, <DimDynamic.STATIC: 2>, <DimDynamic.STATIC: 2>], dynamic_strides=[<DimDynamic.INFER_STRIDE: 4>, <DimDynamic.INFER_STRIDE: 4>, <DimDynamic.INFER_STRIDE: 4>], constraint_sizes=[None, None, None], constraint_strides=[None, None, None], view_base_context=None, tensor_source=LocalSource(local_name='x', is_input=True, dynamism=None, is_derefed_cell_contents=False), shape_env_to_source_to_symbol_cache={}) <class 'torch.Tensor'>
+create_graph_input L_x_ L['x'] FakeTensor(..., device='cuda:0', size=(3, 31, 64)) at debug_level 0 before=False
+TRACE FX call bmm from /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:49 in forward (ToyModule.forward)
+    tmp1 = torch.bmm(x, y)
+           ~~~~~~~~~^^^^^^
+TRACE STORE_FAST tmp1 [TensorVariable()]
+TRACE starts_line /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:50 in forward (ToyModule.forward)
+        res = torch.sigmoid(tmp1)
+TRACE LOAD_GLOBAL torch []
+TRACE LOAD_ATTR sigmoid [NullVariable, PythonModuleVariable(<module 'torch' from '/data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/__init__.py'>)]
+TRACE LOAD_FAST tmp1 [NullVariable, TorchInGraphFunctionVariable(<built-in method sigmoid of type object at 0x7f0919b65160>, nonstrict_traceable=False)]
+TRACE PRECALL 1 [NullVariable, TorchInGraphFunctionVariable(<built-in method sigmoid of type object at 0x7f0919b65160>, nonstrict_traceable=False), TensorVariable()]
+TRACE CALL 1 [NullVariable, TorchInGraphFunctionVariable(<built-in method sigmoid of type object at 0x7f0919b65160>, nonstrict_traceable=False), TensorVariable()]
+TRACE FX call sigmoid from /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:50 in forward (ToyModule.forward)
+    res = torch.sigmoid(tmp1)
+          ~~~~~~~~~~~~~^^^^^^
+TRACE STORE_FAST res [TensorVariable()]
+TRACE starts_line /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:52 in forward (ToyModule.forward)
+        return res
+TRACE LOAD_FAST res []
+TRACE RETURN_VALUE None [TensorVariable()]
+Step 1: torchdynamo done tracing forward (RETURN_VALUE)
+RETURN_VALUE triggered compile
+COMPILING GRAPH due to GraphCompileReason(reason='return_value', user_stack=[<FrameSummary file /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py, line 52 in forward>], graph_break=False)
+TRACED GRAPH
+ ===== __compiled_fn_0_1 =====
+ /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/fx/_lazy_graph_module.py class GraphModule(torch.nn.Module):
+    def forward(self, L_y_: "[31mf32[0m[34m[3, 64, 64][0m[2m[34m[4096, 64, 1][0m[2m[32mcuda:0[0m", L_x_: "[31mf32[0m[34m[3, 31, 64][0m[2m[34m[1984, 64, 1][0m[2m[32mcuda:0[0m"):
+        l_y_ = L_y_
+        l_x_ = L_x_
+        
+         [2m# File: /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:49 in forward, code: tmp1 = torch.bmm(x, y)[0m
+        tmp1: "[31mf32[0m[34m[3, 31, 64][0m[2m[34m[1984, 64, 1][0m[2m[32mcuda:0[0m" = torch.bmm(l_x_, l_y_);  [2ml_x_ = l_y_ = None[0m
+        
+         [2m# File: /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:50 in forward, code: res = torch.sigmoid(tmp1)[0m
+        res: "[31mf32[0m[34m[3, 31, 64][0m[2m[34m[1984, 64, 1][0m[2m[32mcuda:0[0m" = torch.sigmoid(tmp1);  [2mtmp1 = None[0m
+        return (res,)
+        
+
+Step 2: calling compiler function inductor
+Step 2: done compiler function inductor
+Step 1: torchdynamo start tracing forward /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:48
+TRACE starts_line /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:48 in forward (ToyModule.forward)
+      def forward(self, x: torch.Tensor, y: torch.Tensor):
+TRACE RESUME 0 []
+TRACE starts_line /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:49 in forward (ToyModule.forward)
+        tmp1 = torch.bmm(x, y)
+TRACE LOAD_GLOBAL torch []
+TRACE LOAD_ATTR bmm [NullVariable, PythonModuleVariable(<module 'torch' from '/data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/__init__.py'>)]
+TRACE LOAD_FAST x [NullVariable, TorchInGraphFunctionVariable(<built-in method bmm of type object at 0x7f0919b65160>, nonstrict_traceable=False)]
+TRACE LOAD_FAST y [NullVariable, TorchInGraphFunctionVariable(<built-in method bmm of type object at 0x7f0919b65160>, nonstrict_traceable=False), LazyVariableTracker()]
+TRACE PRECALL 2 [NullVariable, TorchInGraphFunctionVariable(<built-in method bmm of type object at 0x7f0919b65160>, nonstrict_traceable=False), LazyVariableTracker(), LazyVariableTracker()]
+TRACE CALL 2 [NullVariable, TorchInGraphFunctionVariable(<built-in method bmm of type object at 0x7f0919b65160>, nonstrict_traceable=False), LazyVariableTracker(), LazyVariableTracker()]
+automatic dynamic size L['y'] size(0) 32 != 3
+wrap_to_fake L['y'] (32, 64, 64) StatefulSymbolicContext(dynamic_sizes=[<DimDynamic.DYNAMIC: 0>, <DimDynamic.STATIC: 2>, <DimDynamic.STATIC: 2>], dynamic_strides=[<DimDynamic.INFER_STRIDE: 4>, <DimDynamic.INFER_STRIDE: 4>, <DimDynamic.INFER_STRIDE: 4>], constraint_sizes=[RelaxedUnspecConstraint(warn_only=True), None, None], constraint_strides=[None, None, None], view_base_context=None, tensor_source=LocalSource(local_name='y', is_input=True, dynamism=None, is_derefed_cell_contents=False), shape_env_to_source_to_symbol_cache={}) <class 'torch.Tensor'>
+create_graph_input L_y_ L['y'] FakeTensor(..., device='cuda:0', size=(s0, 64, 64)) at debug_level 0 before=False
+create_graph_input s0 L['y'].size()[0] s0 at debug_level 0 before=True
+_lift_symbols_in_symint s0 from L['y'].size()[0] at debug_level 0
+automatic dynamic size L['x'] size(0) 32 != 3
+wrap_to_fake L['x'] (32, 31, 64) StatefulSymbolicContext(dynamic_sizes=[<DimDynamic.DYNAMIC: 0>, <DimDynamic.STATIC: 2>, <DimDynamic.STATIC: 2>], dynamic_strides=[<DimDynamic.INFER_STRIDE: 4>, <DimDynamic.INFER_STRIDE: 4>, <DimDynamic.INFER_STRIDE: 4>], constraint_sizes=[RelaxedUnspecConstraint(warn_only=True), None, None], constraint_strides=[None, None, None], view_base_context=None, tensor_source=LocalSource(local_name='x', is_input=True, dynamism=None, is_derefed_cell_contents=False), shape_env_to_source_to_symbol_cache={}) <class 'torch.Tensor'>
+create_graph_input L_x_ L['x'] FakeTensor(..., device='cuda:0', size=(s1, 31, 64)) at debug_level 0 before=False
+create_graph_input s1 L['x'].size()[0] s1 at debug_level 0 before=True
+_lift_symbols_in_symint s1 from L['x'].size()[0] at debug_level 0
+TRACE FX call bmm from /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:49 in forward (ToyModule.forward)
+    tmp1 = torch.bmm(x, y)
+           ~~~~~~~~~^^^^^^
+TRACE STORE_FAST tmp1 [TensorVariable()]
+TRACE starts_line /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:50 in forward (ToyModule.forward)
+        res = torch.sigmoid(tmp1)
+TRACE LOAD_GLOBAL torch []
+TRACE LOAD_ATTR sigmoid [NullVariable, PythonModuleVariable(<module 'torch' from '/data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/__init__.py'>)]
+TRACE LOAD_FAST tmp1 [NullVariable, TorchInGraphFunctionVariable(<built-in method sigmoid of type object at 0x7f0919b65160>, nonstrict_traceable=False)]
+TRACE PRECALL 1 [NullVariable, TorchInGraphFunctionVariable(<built-in method sigmoid of type object at 0x7f0919b65160>, nonstrict_traceable=False), TensorVariable()]
+TRACE CALL 1 [NullVariable, TorchInGraphFunctionVariable(<built-in method sigmoid of type object at 0x7f0919b65160>, nonstrict_traceable=False), TensorVariable()]
+TRACE FX call sigmoid from /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:50 in forward (ToyModule.forward)
+    res = torch.sigmoid(tmp1)
+          ~~~~~~~~~~~~~^^^^^^
+TRACE STORE_FAST res [TensorVariable()]
+TRACE starts_line /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:52 in forward (ToyModule.forward)
+        return res
+TRACE LOAD_FAST res []
+TRACE RETURN_VALUE None [TensorVariable()]
+Step 1: torchdynamo done tracing forward (RETURN_VALUE)
+RETURN_VALUE triggered compile
+COMPILING GRAPH due to GraphCompileReason(reason='return_value', user_stack=[<FrameSummary file /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py, line 52 in forward>], graph_break=False)
+REMOVE UNUSED GRAPHARG L['x'].size()[0]
+TRACED GRAPH
+ ===== __compiled_fn_0_3 =====
+ /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/fx/_lazy_graph_module.py class GraphModule(torch.nn.Module):
+    def forward(self, s0: "Sym(s0)", L_y_: "[31mf32[0m[34m[s0, 64, 64][0m[2m[34m[4096, 64, 1][0m[2m[32mcuda:0[0m", L_x_: "[31mf32[0m[34m[s0, 31, 64][0m[2m[34m[1984, 64, 1][0m[2m[32mcuda:0[0m"):
+        l_y_ = L_y_
+        l_x_ = L_x_
+        
+         [2m# File: /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:49 in forward, code: tmp1 = torch.bmm(x, y)[0m
+        tmp1: "[31mf32[0m[34m[s0, 31, 64][0m[2m[34m[1984, 64, 1][0m[2m[32mcuda:0[0m" = torch.bmm(l_x_, l_y_);  [2ml_x_ = l_y_ = None[0m
+        
+         [2m# File: /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/inductor_bmm_fusion.py:50 in forward, code: res = torch.sigmoid(tmp1)[0m
+        res: "[31mf32[0m[34m[s0, 31, 64][0m[2m[34m[1984, 64, 1][0m[2m[32mcuda:0[0m" = torch.sigmoid(tmp1);  [2mtmp1 = None[0m
+        return (res,)
+        
+
+Step 2: calling compiler function inductor
+Step 2: done compiler function inductor

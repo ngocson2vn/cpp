@@ -9,9 +9,11 @@ export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CU
 export PYTHONPATH=/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python
 
 
-
-# python3.11 inductor_fusion_codegen1.py
+# For debugging how Triton bmm template works
 python3.11 inductor_bmm_fusion.py
-echo
 
-find scheduler_debug/torch_compile_debug
+ir_post_fusion=$(find scheduler_debug_bmm/aot | grep ir_post_fusion.txt)
+dbg_dir=$(dirname ${ir_post_fusion})
+base_dir=$(dirname ${dbg_dir})
+find ${base_dir}
+

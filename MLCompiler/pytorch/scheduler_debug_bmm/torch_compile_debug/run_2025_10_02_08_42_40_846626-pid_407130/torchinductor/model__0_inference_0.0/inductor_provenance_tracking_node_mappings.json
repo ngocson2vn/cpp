@@ -1,0 +1,1 @@
+{"preToPost": {"tmp1": ["bmm"], "res": ["sigmoid"]}, "postToPre": {"bmm": ["tmp1"], "sigmoid": ["res"]}, "cppCodeToPost": {"triton_poi_fused_sigmoid_0": ["sigmoid"]}, "postToCppCode": {"sigmoid": ["triton_poi_fused_sigmoid_0"]}}

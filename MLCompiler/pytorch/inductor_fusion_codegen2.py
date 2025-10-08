@@ -2,11 +2,14 @@ import sys
 import os
 import shutil
 
-debug_dir = "./scheduler_debug1"
+debug_dir = "./scheduler_debug2"
 
 if os.path.exists(debug_dir):
-  shutil.rmtree(debug_dir)
-  print(f"Cleaned {debug_dir}")
+    shutil.rmtree(debug_dir)
+    print(f"Cleaned {debug_dir}")
+else:
+    os.makedirs(debug_dir, exist_ok=True)
+    print(f"Created {debug_dir}")
 
 # """
 os.environ["TORCH_LOGS"] = "+dynamo"
@@ -26,9 +29,8 @@ os.environ["TORCHDYNAMO_COMPILE_DYNAMIC_SHAPE"] = "1"
 os.environ["TORCHINDUCTOR_MAX_AUTOTUNE"] = "1"
 os.environ["TORCHINDUCTOR_MAX_AUTOTUNE_GEMM_BACKENDS"] = "TRITON"
 
-# Newly added env vars for relaxing vertical fusion
-os.environ["TORCHINDUCTOR_RELAX_SIZE_CHECK"] = "1"
-os.environ["TORCHINDUCTOR_RELAX_VERTICAL_FUSION"] = "1"
+# Extended vertical fusion
+os.environ["TORCHINDUCTOR_EXTENDED_VERTICAL_FUSION"] = "1"
 # """
 
 import torch
@@ -137,10 +139,13 @@ graph.graph_inputs['arg2_1'] = TensorBox(StorageBox(input1))
 
 V.graph.graph_input_names.extend(graph.graph_inputs.keys())
 
-layout0 = FixedLayout(DEVICE, torch.float16, size=[4*s0, 31, 64], stride=[1984, 64, 1])
-buf0 = ExternKernelOut(layout0, [input0, input1], python_kernel_name="extern_kernels.bmm")
-x = TensorBox(StorageBox(buf0))
+# layout0 = FixedLayout(DEVICE, torch.float16, size=[4*s0, 31, 64], stride=[1984, 64, 1])
+# buf0 = ExternKernelOut(layout0, [input0, input1], python_kernel_name="extern_kernels.bmm")
+# x = TensorBox(StorageBox(buf0))
 
+# Triton bmm template
+target0 = aten.bmm
+x = lowerings[target0](input0, input1)
 
 """
 op1: SchedulerNode(ComputedBuffer)
@@ -168,7 +173,6 @@ class op1_loop_body:
         store = ops.store('buf1', get_index_1, load, None)
         return store
 """
-
 
 # 1. RESHAPE
 # size=[4*s0, 31, 64] -> [s0, 4, 31, 64]
@@ -201,6 +205,7 @@ stack.close()
 
 print(m)
 
+
 def get_args():
     inputs_file = "./inputs.pt"
     if os.path.exists(inputs_file):
@@ -216,3 +221,24 @@ def get_args():
     torch.save(inputs, inputs_file)
     print(f"Saved input tensors to {inputs_file}")
     return arg0_1, arg1_1, arg2_1
+
+arg0_1, arg1_1, arg2_1 = get_args()
+
+"""
+# Incorrect epilogue fusion:
+    # inductor generates a suffix
+    xindex = idx_n + 64*idx_m + 1984*idx_q
+    tl.store(out_ptr1 + (tl.broadcast_to(xindex, acc.shape)), acc, mask)
+
+# Correct epilogue fusion:
+    # inductor generates a suffix
+    xindex = idx_n + 64*idx_m + 1984*idx_q
+
+    # xindex = 7936*p0 + 64*p1 + 1984*p2 + p3
+    p3 = xindex % 64
+    p2 = (xindex // 1984) % 4
+    p1 = (xindex // 64) % 31
+    p0 = xindex // 7936
+    index1 = 7936*p0 + 256*p1 + 64*p2 + p3
+    tl.store(out_ptr1 + (tl.broadcast_to(index1, acc.shape)), acc, mask)
+"""

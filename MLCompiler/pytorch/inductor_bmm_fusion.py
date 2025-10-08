@@ -1,9 +1,9 @@
 import os
 import shutil
 
-debug_dir = "./scheduler_debug"
+debug_dir = "./scheduler_debug_bmm"
 
-if os.path.exists(debug_dir):
+if not (os.getenv("SKIP_TRACE", "0") == "1") and os.path.exists(debug_dir):
   shutil.rmtree(debug_dir)
   print(f"Cleaned {debug_dir}")
 
@@ -22,8 +22,8 @@ os.environ["TORCHINDUCTOR_PROLOGUE_FUSION"] = "1"
 os.environ["TORCHINDUCTOR_DEBUG_FUSION"] = "1"
 os.environ["TORCHDYNAMO_COMPILE_DYNAMIC_SHAPE"] = "1"
 
-os.environ["TORCHINDUCTOR_MAX_AUTOTUNE"] = "1"
-os.environ["TORCHINDUCTOR_MAX_AUTOTUNE_GEMM_BACKENDS"] = "TRITON"
+# os.environ["TORCHINDUCTOR_MAX_AUTOTUNE"] = "1"
+os.environ["TORCHINDUCTOR_MAX_AUTOTUNE_GEMM_BACKENDS"] = "XTRITON"
 # """
 
 import torch
@@ -33,9 +33,11 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 torch.set_float32_matmul_precision('high')
+logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("torch._inductor.scheduler").setLevel(logging.DEBUG)
-# import torch._inductor.scheduler
-# torch._inductor.scheduler.fusion_log.setLevel(logging.DEBUG)
+from torch._inductor.scheduler import fusion_log, loop_ordering_log
+fusion_log.propagate = True
+loop_ordering_log.propagate = True
 
 class ToyModule(nn.Module):
   def __init__(self):
@@ -52,12 +54,20 @@ class ToyModule(nn.Module):
 toy = ToyModule()
 
 if __name__ == "__main__":
-  x1 = torch.rand(3, 3, 9).cuda()
-  y1 = torch.rand(3, 9, 4).cuda()
+  x1 = torch.rand(3, 31, 64).cuda()
+  y1 = torch.rand(3, 64, 64).cuda()
   res1 = toy(x1, y1)
+  print()
   print(f"Result: {res1}")
+  print()
 
-  x2 = torch.rand(32, 3, 9).cuda()
-  y2 = torch.rand(32, 9, 4).cuda()
+  x2 = torch.rand(32, 31, 64).cuda()
+  y2 = torch.rand(32, 64, 64).cuda()
+  print()
+  print(f"x2: {x2}")
+  print()
+  print(f"y2: {y2}")
+  print()
   res2 = toy(x2, y2)
+  print()
   print(f"Result: {res2}")

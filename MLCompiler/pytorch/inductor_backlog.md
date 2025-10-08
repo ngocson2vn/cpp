@@ -1,13 +1,15 @@
 # BACKLOG
-```
-# How to fuse more nodes?
+## 1. How to fuse more nodes?
 fuse(producer, consumer)
 
-# How does Scheduler codegen a FusedSchedulerNode to a Triton kernel?
+## 2. How does Scheduler codegen a FusedSchedulerNode to a Triton kernel?
 What exactly is the programming model of a Triton kernel? <br/>
 - Each Triton kernel has a constexpr blockSize parameter which must be specified at compile time
 - Each Triton kernel instance operates on a block of data. All operations are vectorize-wise.
-```
+
+## 3. How are symbols resolved at runtime?
+s0 -> 32 (batch size)
+
 
 ### 3. Apply the gained knowledge to a custom fusion and lowering process
 

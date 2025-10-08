@@ -143,7 +143,7 @@
             }
         },
         {
-            "name": "Debug Scheduler Fusion",
+            "name": "Debug Scheduler Fusion1",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/MLCompiler/pytorch/inductor_fusion_codegen1.py",
@@ -157,15 +157,44 @@
             }
         },
         {
+            "name": "Debug Scheduler Fusion2",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceRoot}/MLCompiler/pytorch/inductor_fusion_codegen2.py",
+            "cwd": "${workspaceRoot}/MLCompiler/pytorch",
+            "justMyCode": false,
+            "env": {
+                "VSCODE_MODE": "true",
+                "PYTHONPATH": "/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python",
+                "LD_LIBRARY_PATH": "/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CUPTI/lib64",
+                "TORCHINDUCTOR_ENABLE_INFERENCE_FX_PASS": "1"
+            }
+        },
+        {
+            "name": "Debug Scheduler Fusion3",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceRoot}/MLCompiler/pytorch/inductor_fusion_codegen3.py",
+            "cwd": "${workspaceRoot}/MLCompiler/pytorch",
+            "justMyCode": false,
+            "env": {
+                "VSCODE_MODE": "true",
+                "PYTHONPATH": "/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python",
+                "LD_LIBRARY_PATH": "/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CUPTI/lib64",
+                "TORCHINDUCTOR_ENABLE_INFERENCE_FX_PASS": "1"
+            }
+        },
+        {
             "name": "Debug Run Compiled Model",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceRoot}/MLCompiler/pytorch/test_inductor.py",
+            "program": "${workspaceRoot}/MLCompiler/pytorch/inductor_bmm_fusion.py",
             "cwd": "${workspaceRoot}/MLCompiler/pytorch",
             "env": {
                 "PYTHONPATH": "/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python",
                 "LD_LIBRARY_PATH": "/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CUPTI/lib64",
                 "SKIP_TRACE": "1",
+                "DYNAMO_CACHE_START_INDEX": "1",
                 "TORCHINDUCTOR_ENABLE_INFERENCE_FX_PASS": "1"
             }
         }

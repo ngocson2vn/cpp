@@ -1343,7 +1343,7 @@ class op1461_loop_body:
 Perform operations on 1 element
 
 
-## Step 3: Codegen FusedSchedulerNode nodes
+## Step 3: Codegen SchedulerNode nodes
 ```Python
 # /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/graph.py
 class GraphLowering(torch.fx.Interpreter):
@@ -1370,6 +1370,37 @@ class GraphLowering(torch.fx.Interpreter):
             self.wrapper_code.push_codegened_graph(self)
             self.scheduler.codegen()
 
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/codegen/common.py
+    def load(self, name: str, index: sympy.Expr) -> CSEVariable:
+        store_cache = self.kernel.cse.store_cache
+        if name in store_cache:
+            return store_cache[name]
+        out = self.kernel.load(name, index)
+
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/codegen/triton.py
+    def load(self, name: str, index: sympy.Expr):
+        indexing = self.indexing(index, block_ptr=True)
+
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/codegen/simd.py
+    def prepare_indexing(...):
+        return self.codegen_indexing(simp_index)
+
+    def codegen_indexing(self, expr: sympy.Expr) -> sympy.Expr:
+        expr = V.graph.sizevars.simplify_with_ranges(expr, self.var_ranges())
+        for sym in sorted(expr.free_symbols, key=str):
+            if sym in self.range_tree_nodes:
+                # if indexing expression is complicated, we precompute it on the host side
+                # and send the result as a kernel argument
+                replacements = {}
+                for ps in self.range_tree_nodes[sym].precomputed_args():  # type: ignore[index]
+                    replacements[ps] = V.graph.sizevars.lookup_precomputed_size(ps)
+                if len(replacements) > 0:
+                    self.range_tree_nodes[sym].expr = sympy_subs(  # type: ignore[index]
+                        self.range_tree_nodes[sym].expr,
+                        replacements,  # type: ignore[index]
+                    )
+                self.range_tree_nodes[sym].codegen()  # type: ignore[index]
+        return expr
 ```
 
 ### How is the following IR lowered to a Triton kernel?
