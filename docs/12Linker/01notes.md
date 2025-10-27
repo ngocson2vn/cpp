@@ -4,6 +4,13 @@ LIBRARY_PATH=/usr/local/cuda-12.4/lib64
 ```
 Linker will search libraries in ${LIBRARY_PATH} directories.
 
+# Internal vs External Linkage
+`static bool __initialized = true;` (global scope, no namespace)
+- Internal linkage, per-TU copies; name is not namespace-mangled (e.g., `__initialized`), but still local, so coexistence is fine.
+
+In the final ELF:
+- Static symbol table (`.symtab`): may contain two local entries with the same name, each referencing a different section index and value (address/offset). This is allowed.
+
 # PLT and GOT
 https://systemoverlord.com/2017/03/19/got-and-plt-for-pwning.html
 

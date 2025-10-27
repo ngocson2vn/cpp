@@ -39,3 +39,9 @@ test6: test6.cpp
 
 test7: test7.cc
 	clang++ -Xclang -ast-print -fsyntax-only test7.cc > test7.ccx
+
+case1: case1.cpp
+	clang++ -o case1 case1.cpp
+
+main: decltype_auto.cpp
+	clang++ -std=c++17 -o main decltype_auto.cpp

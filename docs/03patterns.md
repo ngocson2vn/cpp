@@ -1,5 +1,5 @@
 # Pointer to Implementation
-## Core Idea
+### Core Idea
 - The public class declaration in the header contains only:
   - Public interface methods.
   - A forward declaration of the `Impl` class.
@@ -8,4 +8,5 @@
   - All private members.
   - Implementation of logic, including headers that would otherwise leak into the public header.
 
-## Concrete Example: A Logger Class
+### Concrete Example: A Logger Class
+[pattern_pointer_to_impl](../Examples/pattern_pointer_to_impl/)

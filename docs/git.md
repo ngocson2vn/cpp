@@ -91,3 +91,9 @@ git config user.email "ngocson2vn@gmail.com"
 git fetch origin --tags --prune
 git checkout -b v3.4.0 tags/v3.4.0
 ```
+
+# Credentials
+```Bash
+apt install -y libsecret-*
+git config --global credential.helper libsecret
+```

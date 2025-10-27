@@ -111,13 +111,15 @@
         "ranges": "cpp",
         "stop_token": "cpp",
         "valarray": "cpp",
-        "expected": "cpp"
+        "expected": "cpp",
+        "*.inc": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "C_Cpp.default.compilerPath": "/usr/bin/g++",
     "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: WebKit, ColumnLimit: 120, PointerAlignment: Left}",
     "C_Cpp.default.browse.path": [
-        "/usr/local/cuda/include",
+        "/usr/include",
+        "/usr/include/c++/12",
         "${workspaceFolder}/**"
     ],
     "python.analysis.extraPaths": [
