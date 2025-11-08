@@ -1591,3 +1591,21 @@ def call(args):
         print(f"buf81: {buf81}")
 ```
 When we run the compiled model with export SKIP_TRACE=1, Dynamo will load the compiled module and call the function **call(args)**.
+
+# Debug Triton Kernels
+Directly modify Triton kernels inside the compiled module and then rerun the compiled module. <br/>
+For example,
+```Python
+@triton.jit
+def triton_poi_fused_4(in_ptr0, in_ptr1, out_ptr0, out_ptr1, xnumel_1, XBLOCK : tl.constexpr):
+    pid = tl.program_id(0)
+    num_xblocks_0 = tl.cdiv(2305, XBLOCK)
+    tl.device_print("[SONY] num_xblocks_0", num_xblocks_0) # <-- Add tl.device_print
+```
+Output:
+```Bash
+pid (2, 0, 0) idx () [SONY] num_xblocks_0: 10
+pid (2, 0, 0) idx () [SONY] num_xblocks_0: 10
+pid (2, 0, 0) idx () [SONY] num_xblocks_0: 10
+...
+```
