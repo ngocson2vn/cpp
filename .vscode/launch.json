@@ -185,6 +185,20 @@
             }
         },
         {
+            "name": "Debug Scheduler Combo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceRoot}/MLCompiler/pytorch/test_inductor_combo.py",
+            "cwd": "${workspaceRoot}/MLCompiler/pytorch",
+            "justMyCode": false,
+            "env": {
+                "VSCODE_MODE": "true",
+                "PYTHONPATH": "/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python",
+                "LD_LIBRARY_PATH": "/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CUPTI/lib64",
+                "TORCHINDUCTOR_ENABLE_INFERENCE_FX_PASS": "1"
+            }
+        },
+        {
             "name": "Debug Run Compiled Model",
             "type": "debugpy",
             "request": "launch",

@@ -17,3 +17,6 @@ loops:
 Notes:
 - No temporaries are materialized as buffers; they are SSA scalars within the loop body.
 - If multiple outputs share the same iteration space, they appear as additional stores in the same loop.
+
+# Numerical Fidelity
+Core techniques such as kernel fusion fundamentally alter the order of mathematical operations. Because floating-point addition and multiplication are not associative, changing the sequence of calculations leads to different accumulations of rounding errors.

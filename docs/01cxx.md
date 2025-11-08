@@ -965,3 +965,13 @@ Sample code: [pack_expansion](../Examples/pack_expansion/main.cc)
   // There seem to be no such limitations for initializer_list.
   (void)std::initializer_list<int>{0, (printType<Args>(), 0)...};
 ```
+
+# String concatenation
+In C and C++, adjacent string literals are automatically concatenated at compile time. So:
+```C++
+printf("blockSizeX" " should be a positive integer number.");
+```
+is equivalent to:
+```C++
+printf("blockSizeX should be a positive integer number.");
+```

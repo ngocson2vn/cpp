@@ -9,4 +9,6 @@ Folly/folly/
 main
 main2
 Examples/cmake/*/build/
+Examples/**/*.txt
+Examples/**/*.cxx
 .ipynb_checkpoints/
