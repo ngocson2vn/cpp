@@ -1,0 +1,2 @@
+export TORCHINDUCTOR_CACHE_DIR="./debug_dir/aot/inductor"
+python3.11 debug_dir/torch_compile_debug/run_2025_11_06_04_44_13_368718-pid_630143/torchinductor/model__0_inference_0.0/output_code.py

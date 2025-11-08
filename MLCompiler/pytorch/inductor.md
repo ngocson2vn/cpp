@@ -62,9 +62,15 @@
     - [How does Scheduler fuse two SchedulerNode nodes?](#how-does-scheduler-fuse-two-schedulernode-nodes)
       - [Understand the following IR:](#understand-the-following-ir)
       - [Completely understand `class op1461_loop_body` and `def body(self, ops)`](#completely-understand-class-op1461_loop_body-and-def-bodyself-ops)
-  - [Step 3: Codegen FusedSchedulerNode nodes](#step-3-codegen-fusedschedulernode-nodes)
+  - [Step 3: Codegen SchedulerNode nodes](#step-3-codegen-schedulernode-nodes)
     - [How is the following IR lowered to a Triton kernel?](#how-is-the-following-ir-lowered-to-a-triton-kernel)
+- [Triton Kernel](#triton-kernel)
+- [Codegen Combo Kernels](#codegen-combo-kernels)
+- [Triton Config](#triton-config)
+- [Get compiled module path](#get-compiled-module-path)
+- [Debug Compiled Module](#debug-compiled-module)
 <!-- TOC END -->
+
 
 
 
@@ -1460,3 +1466,128 @@ class op1_loop_body:
         return store
 
 ```
+
+# Triton Kernel
+```Python
+# Python code:
+#   /path/to/model/aot_compile_cache/inductor/bj/cbj4ocbh5avlulkuyxty3hyad5gk4xghgpisjet45smce6m4yrdr.py
+# IR path:
+#   /path/to/model/aot_compile_cache/inductor/triton/0/5JCCLTSPXZL37Z5XFEMM7ZYJRUTWKNXOAEGR23673G6PXO5OWF3A/triton_mm.ttir
+```
+<br/>
+
+How to find the corresponding Triton kernel:
+```Bash
+cd /path/to/model/aot_compile_cache/inductor/
+grep -R 'N = 1781'
+```
+
+From Python code filename, we can look up IR as follows:
+```Bash
+cd /path/to/model/aot_compile_cache/inductor/triton/
+grep -R cbj4ocbh5avlulkuyxty3hyad5gk4xghgpisjet45smce6m4yrdr.py
+```
+<br/>
+
+
+# Codegen Combo Kernels
+```Python
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/codegen/simd.py
+    def codegen_combo_kernel(self, combo_kernel_node):
+        subkernel_nodes = combo_kernel_node.get_subkernel_nodes()
+        custom_part_algorithm = combo_kernel_node.use_custom_partition_algo
+        enable_autotune = combo_kernel_node.enable_autotune
+        mixed_sizes = config.combo_kernel_allow_mixed_sizes > 1 or (
+            config.combo_kernel_allow_mixed_sizes == 1 and custom_part_algorithm
+        )
+
+        kernel_code_list = self.generate_combo_kernel_code(
+            subkernel_nodes, custom_part_algorithm, enable_autotune, mixed_sizes
+        )
+
+        for src_code, kernel, _ in kernel_code_list:
+            kernel_name = self.define_kernel(src_code, [combo_kernel_node], kernel)
+            self.codegen_comment([combo_kernel_node])
+            log.debug("ComboKernels: generated kernel %s.", kernel_name)
+            kernel.call_kernel(V.graph.wrapper_code, kernel_name)
+
+        self.free_buffers_in_scheduler()
+
+
+# /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/codegen/triton_combo_kernel.py
+```
+
+# Triton Config
+```Python
+# /data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/runtime/triton_heuristics.py
+def triton_config(
+    size_hints,
+    x,
+    y=None,
+    z=None,
+    num_stages=1,
+    num_elements_per_warp=256,
+    min_elem_per_thread=0,
+) -> Config:
+...
+    x, _num_blocks = _check_max_grid_x(size_hints, x, num_warps)
+    x = min(x, size_hints["x"])
+    x = min(x, config.triton.max_xblock) # This may be needed
+
+    cfg = {"XBLOCK": x}
+    if y:
+        cfg["YBLOCK"] = y
+    if z:
+        cfg["ZBLOCK"] = z
+    check_max_block(cfg)
+    check_config(cfg, xnumel=xnumel, ynumel=ynumel, znumel=znumel)
+    return Config(cfg, num_warps=num_warps, num_stages=num_stages)
+```
+
+# Get compiled module path
+At runtime, the compiled module will be loaded by class SerializableCallable(torch.nn.Module)
+```Python
+# site-packages/torch/_functorch/aot_autograd.py
+class SerializableCallable(torch.nn.Module):
+    @staticmethod
+    def deserialize(compiled_fn, runtime_metadata):
+        path = get_path(compiled_fn.cache_key, "py")[2]
+        compiled_fn.current_callable = PyCodeCache.load_by_key_path(
+            compiled_fn.cache_key,
+            path,
+            compiled_fn.cache_linemap,
+            compiled_fn.constants,
+        ).call
+        return SerializableCallable(compiled_fn, runtime_metadata)
+```
+Because this class is serialized, so if we modify it, the change won't take effect.<br/>
+In order to get the path to the compiled module, we need to modify **PyCodeCache.load_by_key_path()** as follows:
+
+```Python
+# site-packages/torch/_inductor/codecache.py
+class PyCodeCache:
+    @classmethod
+    def load_by_key_path(
+        cls,
+        key: str,
+        path: str,
+        linemap: Optional[list[tuple[int, str]]] = None,
+        attrs: Optional[dict[str, Any]] = None,
+    ) -> ModuleType:
+        if linemap is None:
+            linemap = []
+
+        # print(f"Module path: {path}")
+        mod = _reload_python_module(key, path)
+        if hasattr(mod, "benchmark_compiled_module"):
+            print(f"\n=> Compiled module: {path}\n")
+```
+
+# Debug Compiled Module
+After we get the path to the compiled module, we can add a **print()** statement for debugging:
+```Python
+def call(args):
+        triton_poi_fused_4.run(_tensor_constant0, arg1_1, buf81, buf147, triton_poi_fused_4_xnumel_1, stream=stream0)
+        print(f"buf81: {buf81}")
+```
+When we run the compiled model with export SKIP_TRACE=1, Dynamo will load the compiled module and call the function **call(args)**.

@@ -2,6 +2,6 @@
 
 set -e
 
-rm -rf debug/*
-find debug/
-echo "Cleaned debug/"
+rm -rf debug_dir/*
+echo "Cleaned debug_dir/"
+mkdir -p debug_dir/

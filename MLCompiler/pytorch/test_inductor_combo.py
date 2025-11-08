@@ -62,13 +62,11 @@ class ToyModule(nn.Module):
   def forward(self, x, y):
     tmp0 = torch.add(x, y)
     tmp1 = torch.sum(tmp0, 1)
-
     tmp2 = torch.sigmoid(tmp1)
-    return tmp2
-    # tmp3 = torch.sum(tmp2, 0)
 
-    # tmp4 = torch.sigmoid(tmp3)
-    # return tmp4
+    tmp3 = torch.sum(tmp0, 0)
+    tmp4 = torch.sigmoid(tmp3)
+    return tmp2, tmp4
 
   # # Epilogue fusion pattern
   # def forward(self, x: torch.Tensor, y: torch.Tensor):
@@ -79,10 +77,11 @@ class ToyModule(nn.Module):
 toy = ToyModule()
 
 if __name__ == "__main__":
-  x = torch.rand(3, 3).cuda()
-  y = torch.rand(3, 3).cuda()
-  res = toy(x, y)
-  print(f"Result: {res}")
+  x = torch.rand(9, 9).cuda()
+  y = torch.rand(9, 9).cuda()
+  outputs = toy(x, y)
+  for i in range(len(outputs)):
+    print(f"outputs[{i}]: {outputs[i]}")
 
   # x1 = torch.rand(3, 9).cuda()
   # y1 = torch.rand(9, 4).cuda()
