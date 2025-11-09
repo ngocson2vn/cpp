@@ -22,8 +22,8 @@ os.environ["TORCHINDUCTOR_PROLOGUE_FUSION"] = "0"
 os.environ["TORCHINDUCTOR_DEBUG_FUSION"] = "1"
 os.environ["TORCHDYNAMO_COMPILE_DYNAMIC_SHAPE"] = "1"
 
-# os.environ["TORCHINDUCTOR_MAX_AUTOTUNE"] = "1"
-os.environ["TORCHINDUCTOR_MAX_AUTOTUNE_GEMM_BACKENDS"] = "ATEN"
+os.environ["TORCHINDUCTOR_MAX_AUTOTUNE"] = "1"
+os.environ["TORCHINDUCTOR_MAX_AUTOTUNE_GEMM_BACKENDS"] = "TRITON"
 os.environ["EXPOSE_SERIALIZABLE_BACKEND_CALLABLE"] = "1"
 
 
@@ -52,14 +52,14 @@ toy = ToyModule()
 
 if __name__ == "__main__":
   x1 = (torch.rand(8, 256).cuda() - 0.5)
-  y1 = (torch.rand(256, 256).cuda() - 0.5).to(torch.float64)
+  y1 = (torch.rand(256, 256).cuda() - 0.5)
   res1 = toy(x1, y1)
   print(f"x1: {x1}")
   print(f"y1: {y1}")
   print(f"Result: {res1}\n")
 
   x2 = (torch.rand(16, 256).cuda() - 0.5)
-  y2 = (torch.rand(256, 256).cuda() - 0.5).to(torch.float64)
+  y2 = (torch.rand(256, 256).cuda() - 0.5)
   res2 = toy(x2, y2)
   print(f"x2: {x2}")
   print(f"y2: {y2}")

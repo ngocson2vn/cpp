@@ -97,3 +97,15 @@ git checkout -b v3.4.0 tags/v3.4.0
 apt install -y libsecret-*
 git config --global credential.helper libsecret
 ```
+
+# SSH Tunnel
+Route: your_server -> internet_access_server -> github.com
+<br/>
+`your_server` must be able to ssh to `internet_access_server`
+```Bash
+Host github.com
+    HostName github.com
+    User git
+    StrictHostKeyChecking No
+    ProxyCommand ssh -qW %h:%p son.nguyen@internet_access_server
+```

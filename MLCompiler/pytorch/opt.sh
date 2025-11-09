@@ -38,8 +38,8 @@ export TRITON_OVERRIDE_PTX_VERSION=74
 echo
 
 # python3.11 test_inductor.py
-# python3.11 test_inductor_mm.py
-python3.11 test_inductor_combo.py
+python3.11 test_inductor_mm.py
+# python3.11 test_inductor_combo.py
 echo
 
 find ${TORCH_COMPILE_DEBUG_DIR}/aot/ -maxdepth 1
