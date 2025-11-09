@@ -1609,3 +1609,155 @@ pid (2, 0, 0) idx () [SONY] num_xblocks_0: 10
 pid (2, 0, 0) idx () [SONY] num_xblocks_0: 10
 ...
 ```
+
+# Triton GEMM Autotune
+```Python
+# /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/select_algorithm.py
+class TritonTemplate(KernelTemplate):
+    def generate(...):  # type: ignore[override]
+        bmreq_cls: type[TritonBenchmarkRequest]
+        if layout.device.type == "cpu":
+            bmreq_cls = TritonCPUBenchmarkRequest
+        else:
+            bmreq_cls = TritonGPUBenchmarkRequest
+
+# /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/autotune_process.py
+class TritonGPUBenchmarkRequest(GPUDeviceBenchmarkMixin, TritonBenchmarkRequest):
+    pass
+
+class TritonBenchmarkRequest(BenchmarkRequest):
+    def benchmark(
+        self,
+        *input_tensors: torch.Tensor,
+        output_tensor: Optional[torch.Tensor] = None,
+    ) -> float:
+
+# /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/select_algorithm.py
+class TritonTemplateCaller(ir.TritonTemplateCallerBase):
+    def benchmark(self, *args, out):
+        assert self.bmreq is not None
+        return self.bmreq.benchmark(*args, output_tensor=out) # self.bmreq is an instance of TritonGPUBenchmarkRequest
+
+# /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/autotune_process.py
+class TritonBenchmarkRequest(BenchmarkRequest):
+    def benchmark(
+        self,
+        *input_tensors: torch.Tensor,
+        output_tensor: Optional[torch.Tensor] = None,
+    ) -> float:
+        try:
+            if hasattr(self, "module_cache_key") and self.module_cache_key == "ctxjmjdz4ko4zzxcyqompjgo67d47coay75po32swkil5cuhp4kz":
+                ipdb.set_trace()
+                print(f"Module path: {self.module_path}")
+
+            out = self.do_bench(fn, *input_tensors, output_tensor)
+        except Exception as ex:
+            msg = str(ex)
+            if "misaligned address" in msg:
+                ipdb.set_trace()
+                print("[SONY_DEBUG]: {ex}")
+            raise ex
+
+# /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/autotune_process.py
+class GPUDeviceBenchmarkMixin:
+    def do_bench(
+        self,
+        fn,
+        *input_tensors: torch.Tensor,
+        output_tensor: Optional[torch.Tensor] = None,
+    ) -> float:
+        with device_interface.device(device_idx):  # type: ignore[attr-defined]
+            out = benchmarker.benchmark_gpu(fn)
+            device_interface.synchronize()  # shake out any CUDA errors
+
+# /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/runtime/benchmarking.py
+benchmarker = (
+    InductorBenchmarker() if use_experimental_benchmarker else TritonBenchmarker()
+)
+# By default, use_experimental_benchmarker is True
+class InductorBenchmarker(TritonBenchmarker):
+    @time_and_count
+    def benchmark_gpu(
+        self: Self,
+        _callable: Callable[[], Any],
+        estimation_iters: int = 5,
+        memory_warmup_iters: int = 100,
+        benchmark_iters: int = 100,
+        max_benchmark_duration: int = 25,
+        **kwargs: Any,
+    ) -> float:
+        """Benchmark a GPU callable using a custom benchmarking implementation.
+
+        Arguments:
+        - _callable: The callable to benchmark.
+
+        Keyword Arguments:
+        - estimation_iters: Optionally, the number of iterations to run `_callable`
+        during runtime estimation.
+        - memory_warmup_iters: Optionally, the number of iterations to flush the L2
+        cache before starting benchmarking.
+        - benchmark_iters: Optionally, the number of iterations to run `_callable`
+        during the benchmarking.
+        - max_benchmark_duration: Optionally, the maximum duration of the benchmarking,
+        in milliseconds. An estimated duration is calculated based on the values
+        of `memory_warmup_iters` and `benchmark_iters`, along with the estimated
+        runtime of `_callable` and various other factors, and we then shrink
+        `benchmark_iters` to fit in the alloted maximum duration.
+        - **kwargs: Additional kwargs that may be passed to the fallback.
+
+        Returns:
+        - The minimum runtime of `_callable`, in milliseconds.
+        """
+```
+
+# Triton Kernel run method
+Given [cases/triton_mm_ok.py](./cases/triton_mm_ok.py):
+```Python
+triton_path = "./cases/triton_mm_ok.py"
+key = os.path.basename(triton_path).split(".")[0]
+mod = PyCodeCache.load_by_key_path(key, triton_path)
+mod.triton_mm.run(
+    A, B, Out,
+    _grid_0=grid_0,
+    _grid_1=1,
+    _grid_2=1,
+    stream=stream.cuda_stream
+)
+
+# The `run` method is defined here
+# /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/runtime/triton_heuristics.py
+class CachingAutotuner(KernelInterface):
+    def run(
+        self,
+        *args,
+        stream,
+        benchmark_run=False,
+        **kwargs,
+    ):  # type:ignore[override]
+        if len(self.launchers) != 1:
+            if len(self.launchers) == 0:
+                start_time = time.time_ns()
+                self.precompile() # Precompile the kernel
+                self.precompile_time_taken_ns = time.time_ns() - start_time
+            if len(self.launchers) > 1:
+                self.autotune_to_one_config(*args, **kwargs)
+
+        if autograd_profiler._is_profiler_enabled:
+            # omit for brevity
+        else:
+            return launcher(
+                *args,
+                **kwargs,
+                stream=stream,
+            )
+```
+
+
+# Run Triton Kernel
+```Bash
+# Run a Triton DSL kernel
+python3.11 run_triton_mm.py
+
+# Launch a kernel from cubin
+python3.11 launch_triton_cubin.py
+```
