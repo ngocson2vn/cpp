@@ -84,6 +84,9 @@ git commit --amend --author="Son Nguyen <ngocson2vn@gmail.com>"
 cd repo
 git config user.name "Son Nguyen"
 git config user.email "ngocson2vn@gmail.com"
+
+git config user.name "Sony Nguyen"
+git config user.email "son.nguyen@bytedance.com"
 ```
 
 # Tags

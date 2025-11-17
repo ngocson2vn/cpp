@@ -86,3 +86,15 @@ eval "${BAZEL_BIN} build ${BAZEL_JOBS_LIMIT} --config=opt --linkopt=-g --per_fil
 # libtensorflow_framework.so.2
 "@org_tensorflow//tensorflow:libtensorflow_framework_import_lib",
 ```
+
+# Custom Host Compiler
+```Bash
+# Real path to the compiler (Cannot use symlink)
+export GCC_HOST_COMPILER_PATH="/data00/home/son.nguyen/workspace/deps/typhoon-blade/gccs/x86_64-x86_64-gcc-830/bin/x86_64-linux-gnu-gcc-8.3.0"
+```
+
+# Fix undefined reference to __stack_chk_guard
+```Bash
+# Edit .bazelrc
+build:linux --host_copt=-fno-stack-protector
+```
