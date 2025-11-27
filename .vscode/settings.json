@@ -112,7 +112,8 @@
         "stop_token": "cpp",
         "valarray": "cpp",
         "expected": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "stacktrace": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "C_Cpp.default.compilerPath": "/usr/bin/g++",

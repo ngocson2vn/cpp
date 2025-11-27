@@ -390,7 +390,7 @@ sudo apt install clang-format
 ```
 
 # union
-In C++, a union is a user-defined datatype in which we can define members of different types of data types just like structures. But one thing that makes it different from structures is that the member variables in a union share the same memory location, unlike a structure that allocates memory separately for each member variable. The size of the union is equal to the size of the largest data type.
+In C++, a union is a user-defined datatype in which we can define members of different types of data types just like structures. **But one thing that makes it different from structures is that the member variables in a union share the same memory location**, unlike a structure that allocates memory separately for each member variable. **The size of the union is equal to the size of the largest data type.**
 
 Memory space can be used by one member variable at one point in time, which means if we assign value to one member variable, it will automatically deallocate the other member variable stored in the memory which will lead to loss of data.
 
@@ -630,6 +630,57 @@ where, `layout_a()` is a constexpr function.
 
 # ADL - Argument-Dependent Lookup
 https://en.cppreference.com/w/cpp/language/adl
+```C++
+#include <iostream>
+#include <string>
+
+namespace factory {
+
+struct Machine {
+  // Friend defined INSIDE the class (Hidden Friend)
+  friend void check(Machine* m) {
+    // Accessing private members is allowed because it is a friend.
+    if (m->state) {
+      std::cout << "Machine " << m->name << " is OK" << std::endl;
+    } else {
+      std::cout << "Machine " << m->name << " is NG" << std::endl;
+    }
+  }
+
+ private:
+  std::string name = "Bot01"; // Added default value for demo
+  bool state = true;          // Added default value for demo
+};
+
+} // namespace factory
+
+int main() {
+    factory::Machine m;
+    
+    // check(&m);           // Works via ADL
+    // factory::check(&m);  // Fails (name not declared in namespace scope)
+    
+   // Correct usage
+   // ADL triggers. The compiler sees ptr is type factory::Machine*, looks inside factory, and finds the friend.
+    check(&m);
+    return 0;
+}
+```
+The function `check(Machine* m)` is a **non-member** function that resides within the factory namespace, but it has a special visibility property known as a "Hidden Friend."
+
+Here is the breakdown of its scope and visibility.
+
+**The Namespace Scope**
+Although check is defined inside the struct Machine braces, it is not a member function of Machine.
+
+It belongs to the surrounding namespace: factory.
+
+However, because it is not declared outside the class, the compiler does not "see" it during normal name lookup.
+
+**Visibility and Argument Dependent Lookup (ADL)**
+This is the most critical aspect of the scope. You cannot call this function using standard qualified lookup (e.g., `factory::check(...)` will fail to compile).
+
+It can only be found via **Argument Dependent Lookup (ADL)**, also known as **Koenig Lookup**. This means the compiler will only find `check` if you call it with an argument that belongs to the `factory` namespace (in this case, `Machine*`).
 
 
 # Type of an object

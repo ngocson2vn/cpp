@@ -41,3 +41,9 @@ cpp macro1.cpp > macro1.i
 INTERNAL_REGISTER_LOCAL_DEVICE_FACTORY_NAME(0);
 // will be expanded to ___0__object_
 ```
+
+# Variadic Comma Omission
+When **__VA_ARGS__** is empty, the `##` operator effectively "eats" the preceding comma, preventing the syntax error
+```C++
+printf(format_str, ##__VA_ARGS__);
+```
