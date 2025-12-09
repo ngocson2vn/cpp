@@ -20,7 +20,7 @@ struct TypeB {
 };
 
 template <typename T>
-void print_host_type(const char* name, bool lb = true) {
+void print_host_type(const char* name) {
   const char* func_name = __PRETTY_FUNCTION__;
   // printf("%s\n", func_name);
   char* type = const_cast<char*>(func_name);
@@ -40,19 +40,16 @@ void print_host_type(const char* name, bool lb = true) {
     n++;
   }
 
-  if (lb) {
-    printf("\n%s: %.*s\n", name, n, type);
-  } else {
-    printf("%s: %.*s\n", name, n, type);
-  }
+  printf("%s: %.*s\n", name, n, type);
 }
 
 int main() {
+  // error: indirection requires pointer operand ('TypeA' invalid)
   // using DeducedTypeA = decltype(*std::declval<TypeA&>());
   // print_host_type<DeducedTypeA>();
 
   using DeducedTypeB = decltype(*std::declval<TypeB&>());
-  print_host_type<DeducedTypeB>("DeducedTypeB", false);
+  print_host_type<DeducedTypeB>("DeducedTypeB");
 
   if constexpr(has_dereference<TypeA>::value) {
     std::cout << "TypeA has a dereference operator*()" << std::endl;
