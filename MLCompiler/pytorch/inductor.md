@@ -1761,3 +1761,83 @@ python3.11 run_triton_mm.py
 # Launch a kernel from cubin
 python3.11 launch_triton_cubin.py
 ```
+
+# Common Issues
+## CppCompileError: C++ compile error
+This error occurs when loading compiled function file `aot_compile_cache/__compiled_fn_0_3_1.dill`<br/>
+Traceback:
+```Python
+  File "/path/to/inductor/qe/cqeyuw6abegfiqpjiuvd6xtlamwav2zpmcyijq4mi7skadfaxtdb.py", line 6165, in <module>
+    cpp_fused_42 = async_compile.cpp_pybinding(['const int64_t*', 'int64_t*'],
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/async_compile.py", line 371, in cpp_pybinding
+    return CppPythonBindingsCodeCache.load_pybinding(argtypes, source_code)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/codecache.py", line 2256, in load_pybinding
+    return cls.load_pybinding_async(*args, **kwargs)()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/codecache.py", line 2248, in future
+    result = get_result()
+             ^^^^^^^^^^^^
+  File "/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/codecache.py", line 2055, in load_fn
+    result = worker_fn()
+             ^^^^^^^^^^^
+  File "/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/codecache.py", line 2085, in _worker_compile_cpp
+    cpp_builder.build()
+  File "/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/cpp_builder.py", line 1601, in build
+    run_compile_cmd(build_cmd, cwd=_build_tmp_dir)
+  File "/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/cpp_builder.py", line 355, in run_compile_cmd
+    _run_compile_cmd(cmd_line, cwd)
+  File "/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/cpp_builder.py", line 350, in _run_compile_cmd
+    raise exc.CppCompileError(cmd, output) from e
+torch._dynamo.exc.InternalTorchDynamoError: CppCompileError: C++ compile error
+
+Command:
+g++ /path/to/inductor/jp/cjpe2fgtcpvubl526oizqblmkrfti3xis5huwaimoa7i2mpzfij4.cpp -D TORCH_INDUCTOR_CPP_WRAPPER -D STANDALONE_TORCH_HEADER -D C10_USING_CUSTOM_GENERATED_MACROS -D CPU_CAPABILITY_AVX512 -shared -fPIC -O3 -DNDEBUG -fno-trapping-math -funsafe-math-optimizations -ffinite-math-only -fno-signed-zeros -fno-math-errno -fexcess-precision=fast -fno-finite-math-only -fno-unsafe-math-optimizations -ffp-contract=off -fno-tree-loop-vectorize -march=native -Wall -std=c++17 -Wno-unused-variable -Wno-unknown-pragmas -fopenmp -I/data00/home/son.nguyen/.pyenv/versions/3.11.2/include/python3.11 -I/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/include -I/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/include/torch/csrc/api/include -mavx512f -mavx512dq -mavx512vl -mavx512bw -mfma -D_GLIBCXX_USE_CXX11_ABI=1 -ltorch -ltorch_cpu -ltorch_python -lgomp -L/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib -L/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/lib -o /path/to/inductor/jp/cjpe2fgtcpvubl526oizqblmkrfti3xis5huwaimoa7i2mpzfij4.so
+
+Output:
+/path/to/inductor/jp/cjpe2fgtcpvubl526oizqblmkrfti3xis5huwaimoa7i2mpzfij4.cpp:2:10: fatal error: /path/to/Float/worker_0/inductor/pi/cpicxudqmdsjh5cm4klbtbrvy2cxwr7whxl3md2zzdjdf3orvfdf.h: No such file or directory
+    2 | #include "/path/to/Float/worker_0/inductor/pi/cpicxudqmdsjh5cm4klbtbrvy2cxwr7whxl3md2zzdjdf3orvfdf.h"
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+```
+
+**Root Cause:**<br/>
+/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/torch/_inductor/codecache.py
+```Python
+class CppCodeCache:
+    @classmethod
+    def load_async(
+        cls,
+        source_code: str,
+        device_type: str = "cpu",
+        submit_fn: Any = None,
+        extra_flags: Sequence[str] = (),
+    ) -> Any:
+        compile_command = {
+            **cls.cpp_compile_command_flags,
+            "device_type": device_type,
+            "vec_isa": pick_vec_isa(),
+            "extra_flags": extra_flags,
+        }
+
+        _set_gpu_runtime_env()  # cpp_extension consults the env
+
+        command_gen = CppBuilder(
+            name="o", sources="i", BuildOption=CppTorchDeviceOptions(**compile_command)
+        )
+
+        vec_isa_cmd = repr(command_gen.get_command_line())
+        key, input_path = write(source_code, "cpp", extra=vec_isa_cmd)
+
+        if key not in cls.cache:
+            # Compile source_code
+
+        return cls.cache[key]
+```
+When compiling the PyTorch model on a Snapshot machine, `vec_isa_cmd` is computed and then it is used to generate a cache `key`. <br/>
+When loading the compiled model on a Runtime machine, `vec_isa_cmd` is computed again. If its value is different than the value computed on the Snapshot machine, the cpp `source_code` will be compiled again. Since the header file `/path/to/Float/worker_0/inductor/pi/cpicxudqmdsjh5cm4klbtbrvy2cxwr7whxl3md2zzdjdf3orvfdf.h` doesn't exist on the Runtime machine, the error occurred. <br/>
+
+**Solution:**
+1. Ensure that the value of `vec_isa_cmd` is identical on both Snapshot and Runtime machines.
+2. Or on Runtime machines, copy `inductor` dir to `/path/to/Float/worker_0/`
