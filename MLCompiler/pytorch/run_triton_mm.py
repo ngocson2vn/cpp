@@ -7,7 +7,8 @@ from torch._inductor.codecache import PyCodeCache
 
 import ipdb
 
-triton_path = "./cases/triton_mm_faulty.py"
+# triton_path = "./cases/triton_mm_faulty.py"
+triton_path = "./cases/triton_mm_ok.py"
 key = os.path.basename(triton_path).split(".")[0]
 mod = PyCodeCache.load_by_key_path(key, triton_path)
 

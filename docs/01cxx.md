@@ -1026,3 +1026,86 @@ is equivalent to:
 ```C++
 printf("blockSizeX should be a positive integer number.");
 ```
+
+# Stack unwinding during exception handling in C++
+Original article: https://medium.com/@sireeshac/stack-unwinding-during-exception-handling-in-c-c814c5ddfbe0
+<br/>
+
+## Stack and stack frame:
+We all know that stack for the program under execution holds the memory for all the local variables. So, how are the local variables in a multi level function call gets stored (i.e., when one function calls other function which in turn calls another function and so on).
+
+<img src="./images/stack.png">
+<br/>
+
+The picture on the above left shows basic segments of an executing program in memory (assuming stack grows from lower to higher addresses). If you see in detail about stack, stack is comprised of stack frames. Each stack frame corresponds to one function call. There are two pointers useful for accessing addresses on stack. Frame pointer(stored in bp register on x86) points to the beginning of the stack frame and stack pointer(stored in sp register on x86) points to the top of the stack (i.e., end of the innermost frame). Consider the below code.
+
+<img src="./images/functions.png">
+<br/>
+
+Consider main() function is called for execution. A stack frame(also called activation record) is created for main() with frame pointer(bp) pointing to start of stack and stack pointer(sp) pointing to end of the stack. Now consider fun00() is called inside main().
+
+1. The value in the current frame pointer is pushed onto the stack.
+
+2. Stack pointer which is pointing to top of the stack is copied to the frame pointer.
+
+<img src="./images/call_stack.png">
+<br/>
+
+3. Input parameters are (in our case variable c ) pushed onto the stack.
+
+4. Memory for local variables if any would be allocated on stack.(in our case variable x)
+
+5. Now there is another function call to fun01(), steps 1- 4 are repeated and new frame is created.
+
+6. Inside fun01(), fun02() is called and again steps 1– 4 are repeated.
+
+Now let’s see what happens to stack, when you reach the end of fun02() i.e., exiting from fun02().
+
+## Stack Unwinding:
+So, now we know we have four functions called from inside of each function i.e., main(frame0) calls fun00(frame1) which calls fun01(frame2) which calls fun02(frame3). This creates four stack frames on our stack.
+
+Now, let’s see what happens when we reach the end of each function.
+
+Once we reach end of fun02(),
+
+All local variables stored in the stack frame would be destroyed and freed in the reverse order.
+Input variables would be destroyed and freed i.e., free up all resources consumed by stack frame.
+Frame pointer is copied to stack pointer.
+Address of previous frame pointer stored on the stack is loaded into frame pointer.
+Now the stack frame is completely destroyed.
+
+The same steps would be repeated for the remaining functions as well once the end of respective functions are reached.
+
+## Exception handling:
+Exception handling mainly deals with two blocks: try block and catch block. Try block is that block of code from where an exception arises. Catch block does the job of handling the exception thrown from try block.
+
+<img src="./images/try_catch.png">
+
+The above example shows that exception is thrown in main and corresponding catch block is also in main.
+
+Suppose if the exception is thrown in innermost function and if there is no corresponding catch block within that function the exception would be propagated to the outer functions in the call stack one after the other till a corresponding catch block catches the exception.
+
+Let’s see a simple example.
+
+<img src="./images/throw_exception.png">
+
+1. Here we have three functions: main calling fun00, fun00 calling fun01.
+2. Once the execution reaches to he inner function fun00 and exception is thrown.
+3. Execution of fun00 terminates there itself and fun01 is not called.
+4. The exception propagates one level up to main function. what about the local variables p and obj0? (Fig 3 gives the location of these variables and location of memory pointed by these variables.)
+
+Remember our stack unwinding process described above?
+
+Before the exception propagates from fun00 to main, stack frame corresponding to fun00 would be destroyed i.e., destructor of obj0 is called and memory allocated for pointer variable p on the stack would be freed.
+
+<img src="./images/heap.png">
+
+Exception would be caught in main function and remaining part of main would be executed as expected.
+
+In this way, exception would be propagated one level by one level above, till a corresponding catch block is found and all the intermediate stack frames would get removed through the process of stack unwinding.
+
+Well, all good till now. But there’s one problem in our example above. Have you figured it out yet?
+
+In the above example, fun00 contains pointer p and obj0. Memory allocated for p and obj0 is deallocated, obj0 destructor is called and memory for obj0.a is deallocated.
+
+What about the memory pointed by pointer p which is on heap? No one deallocates that memory and we lost the reference to that memory as well causing memory leak. “Well, Smart pointers comes to our rescue here!!!” And if you carefully observe infact our Class A does what a smart pointer does(ofcourse, few more add-ons needed)!!!

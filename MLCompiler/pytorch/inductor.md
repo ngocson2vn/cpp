@@ -1613,6 +1613,7 @@ pid (2, 0, 0) idx () [SONY] num_xblocks_0: 10
 # Triton GEMM Autotune
 ```Python
 # /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/select_algorithm.py
+# `extra_args` including `grid` are passed into `bmreq_cls`
 class TritonTemplate(KernelTemplate):
     def generate(...):  # type: ignore[override]
         bmreq_cls: type[TritonBenchmarkRequest]
@@ -1620,6 +1621,22 @@ class TritonTemplate(KernelTemplate):
             bmreq_cls = TritonCPUBenchmarkRequest
         else:
             bmreq_cls = TritonGPUBenchmarkRequest
+
+        bmreq = bmreq_cls(
+            module_path=result.mod.__file__,
+            module_cache_key=result.mod.key,
+            kernel_name=f"triton_{self.name}",
+            extra_args=[*extra_args, *workspace_args, *grid],
+            num_stages=num_stages,
+            num_warps=num_warps,
+            num_consumer_groups=num_consumer_groups,
+            num_buffers_warp_spec=num_buffers_warp_spec,
+            matrix_instr_nonkdim=kwargs.get("matrix_instr_nonkdim", 0),
+            waves_per_eu=kwargs.get("waves_per_eu", 0),
+            kpack=kwargs.get("kpack", 2),
+            input_tensor_meta=TensorMeta.from_irnodes(full_input_nodes),  # type: ignore[arg-type]
+            output_tensor_meta=TensorMeta.from_irnodes(layout),
+        )
 
 # /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/autotune_process.py
 class TritonGPUBenchmarkRequest(GPUDeviceBenchmarkMixin, TritonBenchmarkRequest):
@@ -1639,12 +1656,20 @@ class TritonTemplateCaller(ir.TritonTemplateCallerBase):
         return self.bmreq.benchmark(*args, output_tensor=out) # self.bmreq is an instance of TritonGPUBenchmarkRequest
 
 # /data00/home/son.nguyen/workspace/torch_dev/optimizer/site-packages/torch/_inductor/autotune_process.py
+# `self.make_run_fn` builds extra arguments
 class TritonBenchmarkRequest(BenchmarkRequest):
     def benchmark(
         self,
         *input_tensors: torch.Tensor,
         output_tensor: Optional[torch.Tensor] = None,
     ) -> float:
+        try:
+            fn = self.make_run_fn(*input_tensors, out=out)
+        except NonzeroWorkspaceNotSupportedError:
+            # Skipping all ops with nonzero workspace requirements
+            autotuning_log.info("Skipping op due to nonzero workspace requirement")
+            return float("inf")
+
         try:
             if hasattr(self, "module_cache_key") and self.module_cache_key == "ctxjmjdz4ko4zzxcyqompjgo67d47coay75po32swkil5cuhp4kz":
                 ipdb.set_trace()
@@ -1760,4 +1785,320 @@ python3.11 run_triton_mm.py
 
 # Launch a kernel from cubin
 python3.11 launch_triton_cubin.py
+```
+
+# GEMM Template Rendering
+Call Stack:
+```Python
+ipdb> where
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/test_inductor_mm_hopper.py(63)<module>()
+     62   y1 = (torch.rand(64, 1024, dtype=torch.bfloat16).cuda() - 0.5)
+---> 63   res1 = toy(x1, y1.T.contiguous())
+     64   print()
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/nn/modules/module.py(1775)_wrapped_call_impl()
+   1774         else:
+-> 1775             return self._call_impl(*args, **kwargs)
+   1776 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/nn/modules/module.py(1786)_call_impl()
+   1785                 or _global_forward_hooks or _global_forward_pre_hooks):
+-> 1786             return forward_call(*args, **kwargs)
+   1787 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/eval_frame.py(832)compile_wrapper()
+    831                 try:
+--> 832                     return fn(*args, **kwargs)
+    833                 except Unsupported as e:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(1875)__call__()
+   1874             # skip=1: skip this frame
+-> 1875             result = self._torchdynamo_orig_backend(
+   1876                 frame, cache_entry, self.hooks, frame_state, skip=1
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(1625)__call__()
+   1624         try:
+-> 1625             result = self._inner_convert(
+   1626                 frame, cache_entry, hooks, frame_state, skip=skip + 1
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(688)__call__()
+    687         with compile_context(CompileContext(compile_id)):
+--> 688             result = _compile(
+    689                 frame.f_code,
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(1434)_compile()
+   1433         try:
+-> 1434             guarded_code, tracer_output = compile_inner(code, one_graph, hooks)
+   1435 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_utils_internal.py(92)wrapper_function()
+     91             if not StrobelightCompileTimeProfiler.enabled:
+---> 92                 return function(*args, **kwargs)
+     93 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(1117)compile_inner()
+   1116             stack.enter_context(CompileTimeInstructionCounter.record())
+-> 1117             return _compile_inner(code, one_graph, hooks)
+   1118 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(1151)_compile_inner()
+   1150         try:
+-> 1151             dynamo_output = compile_frame(
+   1152                 code,
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(1032)compile_frame()
+   1031             with dynamo_timed(f"compile_attempt_{attempt}", log_pt2_compile_event=True):
+-> 1032                 bytecode, tracer_output = transform_code_object(code, transform)
+   1033                 assert tracer_output is not None
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/bytecode_transformation.py(1592)transform_code_object()
+   1591 
+-> 1592     tracer_output = transformations(instructions, code_options)
+   1593     _, bytecode = clean_and_assemble_instructions(instructions, keys, code_options)
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(1004)transform()
+   1003         )
+-> 1004         tracer_output = trace_frame(
+   1005             code,
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(312)_fn()
+    311             try:
+--> 312                 return fn(*args, **kwargs)
+    313             finally:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(815)trace_frame()
+    814     try:
+--> 815         run_tracer()
+    816         tracer_output = DynamoTracerOutput(tracer)
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/convert_frame.py(797)run_tracer()
+    796             with tracing(tracer.output.tracing_context), tracer.set_current_tx():
+--> 797                 tracer.run()
+    798         except exc.UnspecializeRestartAnalysis:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/symbolic_convert.py(1500)run()
+   1499                 try:
+-> 1500                     while self.step():
+   1501                         pass
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/symbolic_convert.py(1348)step()
+   1347         try:
+-> 1348             self.dispatch_table[inst.opcode](self, inst)
+   1349             return not self.output.should_exit
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/symbolic_convert.py(4103)RETURN_VALUE()
+   4102     def RETURN_VALUE(self, inst: Instruction) -> None:
+-> 4103         self._return(inst)
+   4104 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/symbolic_convert.py(4081)_return()
+   4080         log.debug("%s triggered compile", inst.opname)
+-> 4081         all_stack_locals_metadata = self.output.compile_subgraph(
+   4082             self,
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/output_graph.py(1568)compile_subgraph()
+   1567                 output.extend(
+-> 1568                     self.compile_and_call_fx_graph(tx, pass2.graph_output_vars(), root)
+   1569                 )
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/output_graph.py(2013)compile_and_call_fx_graph()
+   2012             with self.restore_global_state():
+-> 2013                 compiled_fn = self.call_user_compiler(gm, self.example_inputs())
+   2014 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/output_graph.py(2136)call_user_compiler()
+   2135         ):
+-> 2136             return self._call_user_compiler(gm, example_inputs)
+   2137 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/output_graph.py(2171)_call_user_compiler()
+   2170                 compiler_fn = WrapperBackend(compiler_fn)
+-> 2171             compiled_fn = compiler_fn(gm, example_inputs)
+   2172             _step_logger()(logging.INFO, f"done compiler function {name}")
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/repro/after_dynamo.py(156)__call__()
+    155         else:
+--> 156             compiled_gm = compiler_fn(gm, example_inputs)
+    157 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/__init__.py(2392)__call__()
+   2391 
+-> 2392         return compile_fx(model_, inputs_, config_patches=self.config)
+   2393 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/compile_fx.py(2681)compile_fx()
+   2680             try:
+-> 2681                 return aot_autograd(
+   2682                     fw_compiler=fw_compiler,
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/backends/common.py(117)__call__()
+    116             with enable_aot_logging(), patch_config:
+--> 117                 cg = aot_module_simplified(gm, example_inputs, **self.kwargs)
+    118                 counters["aot_autograd"]["ok"] += 1
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_functorch/aot_autograd.py(1106)aot_module_simplified()
+   1105             aot_graph_capture = aot_stage1_graph_capture(aot_state, functional_call)
+-> 1106             compiled_fn, _ = aot_stage2_compile(aot_state, aot_graph_capture)
+   1107 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_functorch/_aot_autograd/graph_compile.py(242)aot_stage2_compile()
+    241     else:
+--> 242         return aot_stage2_inference(aot_state, aot_graph_capture)
+    243 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_functorch/_aot_autograd/graph_compile.py(315)aot_stage2_inference()
+    314                 tensorify_python_scalars(fw_module, fake_mode.shape_env, fake_mode)
+--> 315             compiled_fw = compiler(fw_module, updated_flat_args)
+    316 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_functorch/_aot_autograd/schemas.py(1251)__call__()
+   1250     ) -> OutputCode:
+-> 1251         return self.compiler_fn(gm, example_inputs)
+   1252 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/compile_fx.py(2558)fw_compiler_base()
+   2557                     num_orig_model_outputs = get_num_model_outputs(gm)
+-> 2558                 return compile_fx_forward(
+   2559                     gm,
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/compile_fx.py(2275)compile_fx_forward()
+   2274 
+-> 2275     return inner_compile(
+   2276         gm,
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/compile_fx.py(782)compile_fx_inner()
+    781         )
+--> 782         return wrap_compiler_debug(_compile_fx_inner, compiler_name="inductor")(
+    783             gm,
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_dynamo/repro/after_aot.py(144)debug_wrapper()
+    143             # with fake inputs
+--> 144             inner_compiled_fn = compiler_fn(gm, example_inputs)
+    145         except Exception:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/compile_fx.py(974)_compile_fx_inner()
+    973             try:
+--> 974                 mb_compiled_graph = fx_codegen_and_compile(
+    975                     gm, example_inputs, inputs_to_check, **graph_kwargs
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/compile_fx.py(1695)fx_codegen_and_compile()
+   1694 
+-> 1695     return scheme.codegen_and_compile(gm, example_inputs, inputs_to_check, graph_kwargs)
+   1696 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/compile_fx.py(1420)codegen_and_compile()
+   1419                 with V.set_graph_handler(graph), V.set_extern_kernel_nodes([]):
+-> 1420                     graph.run(*example_inputs)
+   1421                     output_strides: list[Optional[tuple[_StrideExprStr, ...]]] = []
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/graph.py(937)run()
+    936         with dynamo_timed("GraphLowering.run"):
+--> 937             return super().run(*args)
+    938 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/fx/interpreter.py(174)run()
+    173             try:
+--> 174                 self.env[node] = self.run_node(node)
+    175             except Exception as e:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/graph.py(1624)run_node()
+   1623                 debug("")
+-> 1624                 result = super().run_node(n)
+   1625 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/fx/interpreter.py(256)run_node()
+    255             assert isinstance(kwargs, dict)
+--> 256             return getattr(self, n.op)(n.target, args, kwargs)
+    257 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/graph.py(1279)call_function()
+   1278 
+-> 1279             out = lowerings[target](*args, **kwargs)  # type: ignore[index]
+   1280 
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/lowering.py(488)wrapped()
+    487 
+--> 488         out = decomp_fn(*args, **kwargs)
+    489         validate_ir(out)
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/kernel/mm.py(795)tuned_mm()
+    794         # Get template choices using the new unified function
+--> 795         choices.extend(
+    796             V.choices.get_mm_configs(kernel_inputs, layout, [mm_template], "mm")
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/choices.py(166)get_mm_configs()
+    165             for c in cs:
+--> 166                 choice = template.choice_or_none(**{**c, **overrides}, **extra_kwargs)
+    167                 if choice is not None:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/codegen/common.py(2431)choice_or_none()
+   2430         temp_choices: list[Any] = []
+-> 2431         result = self.maybe_append_choice(temp_choices, **kwargs)
+   2432         if result is None and len(temp_choices) == 1:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/select_algorithm.py(1467)maybe_append_choice()
+   1466         try:
+-> 1467             choice = self.generate(generate_with_caching=True, **kwargs)
+   1468             if choice is not None:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/select_algorithm.py(1724)generate()
+   1723 
+-> 1724         result = self.generate_and_load(
+   1725             input_nodes,
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/select_algorithm.py(1650)generate_and_load()
+   1649             else:
+-> 1650                 result = generate_code(kernel)
+   1651                 if result is None:  # happens at ZeroDivisionError:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/select_algorithm.py(1602)generate_code()
+   1601             try:
+-> 1602                 template = kernel.render(self.template, kwargs, caching_enabled)
+   1603                 with kernel.set_subgraph_body("<STORE_OUTPUT>"):
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/select_algorithm.py(1171)render()
+   1170         return PartialRender(
+-> 1171             template.render(**template_env, **kwargs),
+   1172             self.render_hooks,
+  /data05/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/jinja2/environment.py(1293)render()
+   1292         try:
+-> 1293             return self.environment.concat(self.root_render_func(ctx))  # type: ignore
+   1294         except Exception:
+  <template>(19)root()
+  /data05/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/jinja2/runtime.py(303)call()
+    302         try:
+--> 303             return __obj(*args, **kwargs)
+    304         except StopIteration:
+  /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/select_algorithm.py(489)wrapper()
+    488                 pre_state = self.input_dependent_preserved_state()
+--> 489                 result = fn(*args, **kwargs)
+    490                 post_state = self.input_dependent_preserved_state()
+> /data05/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/select_algorithm.py(658)def_kernel()
+    657 
+--> 658         assert all(isinstance(x, str) for x in argnames)
+    659         renames = IndentedBuffer(initial_indent=1)
+
+DEBUG:asyncio:Using selector: EpollSelector
+ipdb>
+```
+
+**MLCompiler/pytorch/torch/_inductor/kernel/mm.py**
+```Python
+@register_lowering(aten.mm, type_promotion_kind=None)
+def tuned_mm(mat1, mat2, *, layout=None):
+    ...
+    if is_nonzero and use_triton_template(layout, check_max_autotune=False):
+        # Get template choices using the new unified function
+        choices.extend(
+            V.choices.get_mm_configs(kernel_inputs, layout, [mm_template], "mm")
+        )
+```
+
+**MLCompiler/pytorch/torch/_inductor/choices.py**
+```Python
+class InductorChoices:
+    def get_mm_configs(
+        self,
+        kernel_inputs: KernelInputs,
+        layout: Any,
+        templates: list[Union[KernelTemplate, ExternKernelChoice]],
+        op_name: str,
+        kwarg_overrides: Optional[dict[str, dict[str, Any]]] = None,
+    ) -> Generator[ChoiceCaller, None, None]:
+        ...
+        for template in templates:
+            # Extract template_name from the template object
+            template_name = template.uid
+
+            # Get the appropriate template-specific heuristic
+            heuristic = get_template_heuristic(template_name, device_type, op_name)
+
+            # 
+            # kernel_inputs encapsulates 2 input nodes:
+            # 
+            # kernel_inputs._input_nodes
+            # [StorageBox(
+            #   InputBuffer(name='arg0_1', layout=FixedLayout('cuda:0', torch.bfloat16, size=[256, 1024], stride=[1024, 1]))
+            # ), StorageBox(
+            #   InputBuffer(name='arg1_1', layout=FixedLayout('cuda:0', torch.bfloat16, size=[1024, 64], stride=[64, 1]))
+            # )]
+
+            # 
+            # layout
+            # 
+            # layout is the layout of matrix D
+            # FixedLayout('cuda:0', torch.bfloat16, size=[256, 64], stride=[64, 1])
+
+            cs = heuristic.get_template_configs(
+                kernel_inputs,
+                layout,
+                op_name,
+            )
+            extra_kwargs = heuristic.get_extra_kwargs(kernel_inputs, layout, op_name)
+
+            # Extract layout and input_nodes from extra_kwargs to pass them explicitly
+            layout_val = layout
+            # adjust the kernel inputs to the template-specific heuristic, if needed
+            # default here is to just return the kernel_inputs as is
+            input_nodes_val = heuristic.adjust_kernel_inputs(
+                kernel_inputs, op_name
+            ).nodes()
+
+            # Get overrides for this specific template
+            overrides = kwarg_overrides.get(template.uid, {})
+
+            extra_kwargs["layout"] = layout_val
+            extra_kwargs["input_nodes"] = input_nodes_val
+            for c in cs:
+                choice = template.choice_or_none(**{**c, **overrides}, **extra_kwargs)
+                if choice is not None:
+                    yield choice
+
 ```

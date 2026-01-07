@@ -1,3 +1,4 @@
+pytorch/tmp/
 pytorch/*.nsys-rep
 pytorch/model__1_inference_1.svg
 pytorch/pytorch_src/
@@ -6,3 +7,4 @@ pytorch/scheduler_debug/
 pytorch/scheduler_debug1/
 pytorch/scheduler_debug2/
 pytorch/scheduler_debug3/
+pytorch/scheduler_debug_mm/

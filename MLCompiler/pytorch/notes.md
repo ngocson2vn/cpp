@@ -1,3 +1,25 @@
+<!-- TOC START -->
+- [PyTorch FX GraphModule](#pytorch-fx-graphmodule)
+- [TorchScript](#torchscript)
+  - [Underlying Computational Graph**](#underlying-computational-graph)
+- [Lowering Pipeline](#lowering-pipeline)
+- [TORCH_LIBRARY macro](#torch_library-macro)
+- [Dynamo](#dynamo)
+  - [Save Compiled Code](#save-compiled-code)
+  - [Load Compiled Code](#load-compiled-code)
+  - [Dynamo Symbolic Symbol Logging](#dynamo-symbolic-symbol-logging)
+<!-- TOC END -->
+
+# Check supported cuda version
+```Python
+import torch
+torch.version.cuda
+
+# Collect env
+import torch.utils.collect_env
+torch.utils.collect_env.main()
+```
+
 # PyTorch FX GraphModule
 **Definition:** A GraphModule is a Python-level abstraction in PyTorch's FX framework, representing a computation graph derived from symbolic tracing or manual construction. It is a subclass of torch.nn.Module and encapsulates a computational graph (torch.fx.Graph) along with associated parameters and buffers.
 

@@ -12,4 +12,5 @@ g++ -fno-inline
 # Include Path
 ```Bash
 export CFLAGS=-I/data00/home/son.nguyen/.pyenv/versions/3.9.0/lib/python3.9/site-packages/numpy/_core/include
+export CFLAGS=-I/data05/home/son.nguyen/.pyenv/versions/3.9.0/lib/python3.9/site-packages/numpy/core/include
 ```
