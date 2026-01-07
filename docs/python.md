@@ -37,9 +37,16 @@ Using debugpy: [Example Debug Inductor](../.vscode/launch.json)
 ```
 
 # Python 3.11
-```
+```Bash
 export PIP_BREAK_SYSTEM_PACKAGES=1
 pip3 install/uninstall PACKAGE_NAME
+
+mkdir -p ~/.config/pip/
+cat <<EOF > ~/.config/pip/pip.conf
+[global]
+break-system-packages = true
+EOF
+
 ```
 
 # Ignore Python version requirement
