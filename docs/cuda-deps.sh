@@ -2,10 +2,11 @@
 wget https://developer.download.nvidia.com/compute/cuda/13.1.0/local_installers/cuda_13.1.0_590.44.01_linux.run
 
 
-pip install nvidia-cudnn-cu13
+pip3.11 install nvidia-cudnn-cu13
 
 # User mode
-pip install -U nvidia-cudnn-cu13
+pip3.11 install -U nvidia-cudnn-cu13
+python3.11 -m pip install nvidia-nccl-cu13
 
 # Install nvshmem
 ## arm

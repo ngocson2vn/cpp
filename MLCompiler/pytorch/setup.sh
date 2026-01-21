@@ -5,7 +5,10 @@ Python 3.11.2
 
 # torch
 pip install torch 
+
+unset http_proxy https_proxy
 pip install pydot matplotlib ipdb
+
 sudo apt-get install -y graphviz cmake ccache
 
 # openai triton

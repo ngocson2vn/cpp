@@ -12,3 +12,4 @@ Examples/cmake/*/build/
 Examples/**/*.txt
 Examples/**/*.cxx
 .ipynb_checkpoints/
+site-packages

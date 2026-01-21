@@ -17,12 +17,16 @@ try:
 except:
   raise
 
-x = torch.rand(1024, 9).cuda()
-y = torch.rand(1024, 9).cuda()
+x = (torch.rand(8, 1024, dtype=torch.bfloat16).cuda() - 0.5)
+y = (torch.rand(256, 1024, dtype=torch.bfloat16).cuda() - 0.5).T.contiguous()
 is_perf_mode = os.environ.get("PERF_MODE") == "true"
 if not is_perf_mode:
   res = mod.toy(x, y)
-  print(f"Result:\n{res}")
+  print(f"Result1:\n{res}")
+  x = (torch.rand(32, 1024, dtype=torch.bfloat16).cuda() - 0.5)
+  y = (torch.rand(96, 1024, dtype=torch.bfloat16).cuda() - 0.5).T.contiguous()
+  res = mod.toy(x, y)
+  print(f"Result2:\n{res}")
 else:
   torch.cuda.profiler.start() # start profiling
   for i in range(50):

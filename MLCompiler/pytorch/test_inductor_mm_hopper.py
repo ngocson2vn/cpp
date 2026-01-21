@@ -1,9 +1,11 @@
 import os
 import shutil
 
-debug_dir = "./scheduler_debug_mm"
+debug_dir = os.getenv("TORCH_COMPILE_DEBUG_DIR", "")
+if not os.path.exists(debug_dir):
+  raise RuntimeError("TORCH_COMPILE_DEBUG_DIR is not set")
 
-if not (os.getenv("SKIP_TRACE", "0") == "1") and os.path.exists(debug_dir):
+if (os.getenv("CLEAN_DEBUG_DIR", "0") == "1") and os.path.exists(debug_dir):
   shutil.rmtree(debug_dir)
   print(f"Cleaned {debug_dir}")
 

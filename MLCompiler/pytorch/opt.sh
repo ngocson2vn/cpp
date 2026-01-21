@@ -30,7 +30,8 @@ export TORCHINDUCTOR_MAX_AUTOTUNE_GEMM_BACKENDS="TRITON"
 export EXPOSE_SERIALIZABLE_BACKEND_CALLABLE=1
 
 
-export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CUPTI/lib64
+export LD_LIBRARY_PATH=/usr/local/cuda-13.1/lib64:/usr/local/cuda-13.1/extras/CUPTI/lib64:/usr/lib/aarch64-linux-gnu/nvshmem/13
+export LD_LIBRARY_PATH=/data03/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/nvidia/cudnn/lib:$LD_LIBRARY_PATH
 # export PYTHONPATH=/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python
 
 # export TRITON_OVERRIDE_ARCH=sm86
@@ -39,6 +40,7 @@ export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CU
 # python3.11 test_inductor.py
 # python3.11 test_inductor_mm.py
 # python3.11 test_inductor_combo.py
+export CLEAN_DEBUG_DIR=1
 python3.11 test_inductor_mm_hopper.py
 echo
 
