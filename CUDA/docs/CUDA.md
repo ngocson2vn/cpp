@@ -1,3 +1,15 @@
+<!-- TOC START -->
+- [CUDA Programming Guide](#cuda-programming-guide)
+- [L1 and L2 and HBM](#l1-and-l2-and-hbm)
+- [Memory Address Alignment](#memory-address-alignment)
+- [TensorFlow and CUDA](#tensorflow-and-cuda)
+- [TMA operations and if (threadIdx.x == 0)](#tma-operations-and-if-threadidxx-0)
+- [Warp ID and Lane](#warp-id-and-lane)
+    - [Warp ID](#warp-id)
+    - [Lane (or Lane ID)](#lane-or-lane-id)
+    - [Example: blockDim.x = 128](#example-blockdimx-128)
+<!-- TOC END -->
+
 # CUDA Programming Guide
 https://docs.nvidia.com/cuda/cuda-programming-guide/index.html
 

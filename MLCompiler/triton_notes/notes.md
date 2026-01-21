@@ -582,3 +582,6 @@ def compile(src, target=None, options=None, _env_vars=None):
         next_module = compile_ir(module, metadata)
         ir_filename = f"{file_name}.{ext}"
 ```
+
+# Blackwell Support
+https://github.com/triton-lang/triton/blob/v3.5.1/third_party/nvidia/lib/TritonNVIDIAGPUToLLVM/DotOpToLLVM/MMAv5.cpp

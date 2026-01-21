@@ -7,7 +7,8 @@ Python 3.11.2
 pip install torch 
 
 unset http_proxy https_proxy
-pip install pydot matplotlib ipdb
+pip3.11 install torch 
+pip3.11 install pydot matplotlib ipdb
 
 sudo apt-get install -y graphviz cmake ccache
 
