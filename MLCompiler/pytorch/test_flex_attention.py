@@ -68,6 +68,7 @@ model = ToyModule()
 model.eval()
 
 # Normal case:
+# Create dummy input (Batch=8, SeqLen=512, Dim=1024)
 x = torch.randn(8, 512, 1024, device=g_device).detach()
 
 # Error case:
