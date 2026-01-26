@@ -55,7 +55,7 @@ class FlexAttentionLayer(nn.Module):
 class ToyModule(nn.Module):
   def __init__(self):
       super().__init__()
-      self.attn_layer = FlexAttentionLayer(d_model=1024, num_heads=64).to(device=g_device)
+      self.attn_layer = FlexAttentionLayer(d_model=256, num_heads=8).to(device=g_device)
       self.forward = torch.compile(self.forward, backend=compile_backend)
 
   def forward(self, x):
@@ -68,12 +68,21 @@ model = ToyModule()
 model.eval()
 
 # Normal case:
-# Create dummy input (Batch=8, SeqLen=512, Dim=1024)
-x = torch.randn(8, 512, 1024, device=g_device).detach()
+# Create dummy input (Batch=8, SeqLen=64, Dim=256)
+x = torch.randn(8, 64, 256, device=g_device).detach()
 
 # Error case:
 # Create dummy input (Batch=1024, SeqLen=1024, Dim=1024)
 # x = torch.randn(1024, 1024, 1024, device=g_device).detach()
+
+# Forward pass
+with torch.no_grad():
+    output = model(x)
+print(f"\n==>Output shape: {output.shape}\n")
+
+
+# Batch size 16
+x = torch.randn(16, 64, 256, device=g_device).detach()
 
 # Forward pass
 with torch.no_grad():
