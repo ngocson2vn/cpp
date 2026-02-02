@@ -69,7 +69,17 @@
 - [Triton Config](#triton-config)
 - [Get compiled module path](#get-compiled-module-path)
 - [Debug Compiled Module](#debug-compiled-module)
+- [Debug Triton Kernels](#debug-triton-kernels)
+- [Triton GEMM Autotune](#triton-gemm-autotune)
+- [Triton Kernel run method](#triton-kernel-run-method)
+- [Run Triton Kernel](#run-triton-kernel)
+- [GEMM Template Rendering](#gemm-template-rendering)
+- [Common Issues](#common-issues)
+  - [CppCompileError: C++ compile error](#cppcompileerror-c-compile-error)
+    - [How to get vec_isa_cmd](#how-to-get-vec_isa_cmd)
 <!-- TOC END -->
+
+
 
 
 
@@ -2179,7 +2189,7 @@ class CppCodeCache:
 When compiling the PyTorch model on a Snapshot machine, `vec_isa_cmd` is computed and then it is used to generate a cache `key`. <br/>
 When loading the compiled model on a Runtime machine, `vec_isa_cmd` is computed again. If its value is different than the value computed on the Snapshot machine, the cpp `source_code` will be compiled again. Since the header file `/path/to/Float/worker_0/inductor/pi/cpicxudqmdsjh5cm4klbtbrvy2cxwr7whxl3md2zzdjdf3orvfdf.h` doesn't exist on the Runtime machine, the error occurred. <br/>
 
-## How to get vec_isa_cmd 
+### How to get vec_isa_cmd 
 ```Python
 from torch._inductor.cpu_vec_isa import pick_vec_isa
 from torch._inductor.cpp_builder import (
