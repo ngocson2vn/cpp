@@ -2179,6 +2179,35 @@ class CppCodeCache:
 When compiling the PyTorch model on a Snapshot machine, `vec_isa_cmd` is computed and then it is used to generate a cache `key`. <br/>
 When loading the compiled model on a Runtime machine, `vec_isa_cmd` is computed again. If its value is different than the value computed on the Snapshot machine, the cpp `source_code` will be compiled again. Since the header file `/path/to/Float/worker_0/inductor/pi/cpicxudqmdsjh5cm4klbtbrvy2cxwr7whxl3md2zzdjdf3orvfdf.h` doesn't exist on the Runtime machine, the error occurred. <br/>
 
+## How to get vec_isa_cmd 
+```Python
+from torch._inductor.cpu_vec_isa import pick_vec_isa
+from torch._inductor.cpp_builder import (
+    CppBuilder,
+    CppTorchDeviceOptions
+)
+
+picked_vec_isa = pick_vec_isa()
+device_type = "cpu"
+aot_mode = "inference"
+vec_isa_cmd_gen = CppBuilder(
+    name="o",
+    sources="i",
+    BuildOption=CppTorchDeviceOptions(
+        vec_isa=picked_vec_isa,
+        device_type=device_type,
+        aot_mode=aot_mode,
+    ),
+)
+
+cpp_command = repr(vec_isa_cmd_gen.get_command_line())
+print(cpp_command)
+# 'g++ i -D TORCH_INDUCTOR_CPP_WRAPPER -D STANDALONE_TORCH_HEADER -D C10_USING_CUSTOM_GENERATED_MACROS -D CPU_CAPABILITY_AVX512 -shared -fPIC -O3 -DNDEBUG -fno-trapping-math -funsafe-math-optimizations -ffinite-math-only -fno-signed-zeros -fno-math-errno -fexcess-precision=fast -fno-finite-math-only -fno-unsafe-math-optimizations -ffp-contract=off -fno-tree-loop-vectorize -march=native -Wall -std=c++17 -Wno-unused-variable -Wno-unknown-pragmas -fopenmp -I/usr/include/python3.11 -I/usr/local/lib/python3.11/dist-packages/torch/include -I/usr/local/lib/python3.11/dist-packages/torch/include/torch/csrc/api/include -mavx512f -mavx512dq -mavx512vl -mavx512bw -mfma -mamx-tile -mamx-bf16 -mamx-int8 -D_GLIBCXX_USE_CXX11_ABI=1 -ltorch -ltorch_cpu -lgomp -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/python3.11/dist-packages/torch/lib -o o.so'
+
+# 'g++ i -D TORCH_INDUCTOR_CPP_WRAPPER -D STANDALONE_TORCH_HEADER -D C10_USING_CUSTOM_GENERATED_MACROS -D CPU_CAPABILITY_AVX512 -shared -fPIC -O3 -DNDEBUG -fno-trapping-math -funsafe-math-optimizations -ffinite-math-only -fno-signed-zeros -fno-math-errno -fexcess-precision=fast -fno-finite-math-only -fno-unsafe-math-optimizations -ffp-contract=off -fno-tree-loop-vectorize -march=native -Wall -std=c++17 -Wno-unused-variable -Wno-unknown-pragmas -fopenmp -I/usr/include/python3.11 -I/usr/local/lib/python3.11/dist-packages/torch/include -I/usr/local/lib/python3.11/dist-packages/torch/include/torch/csrc/api/include -mavx512f -mavx512dq -mavx512vl -mavx512bw -mfma -D_GLIBCXX_USE_CXX11_ABI=1 -ltorch -ltorch_cpu -lgomp -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/python3.11/dist-packages/torch/lib -o o.so'
+```
+Read more [amx.md](./amx.md)
+
 **Solution:**
 1. Ensure that the value of `vec_isa_cmd` is identical on both Snapshot and Runtime machines.
 2. Or on Runtime machines, copy `inductor` dir to `/path/to/Float/worker_0/`

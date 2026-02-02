@@ -442,10 +442,72 @@ The given PTX instruction performs an asynchronous bulk copy of a 2D tensor slic
 
 The operand `[%rd3, {%r427, %r402}]` specifies the source data as follows:
 - `%rd3`: A 64-bit register holding a pointer to an opaque tensor map descriptor (a 128-byte structure in global, constant, or parameter memory). This descriptor encodes details about the source tensor in global memory, including its base address, dimensions, element strides (in bytes), data type (e.g., `.f16`, `.u8`), swizzle/interleave modes, fill behavior, and other layout properties.
-- `{%r427, %r402}`: A vector of two 32-bit signed integer registers (`.s32`) providing the starting tensor coordinates (in elements, not bytes) for the copy operation. For a 2D tensor, `%r427` typically indexes the first dimension (e.g., batch or channel, depending on layout like NCHW), and `%r402` indexes the second dimension (e.g., spatial height or width). The effective source address is computed by applying these coordinates to the strides and base defined in the tensor map.
+- `{%r427, %r402}`: A vector of two 32-bit signed integer registers (`.s32`) providing the starting tensor coordinates (in elements, not bytes) for the copy operation. For a 2D tensor, `%r427` typically indexes the first dimension (e.g., batch or channel, depending on layout like NCHW), and `%r402` indexes the second dimension (e.g., spatial height or width). The effective source address is computed by applying these coordinates to the strides and base defined in the tensor map.<br/>
 
 The copy starts at the computed position in the source tensor and transfers a fixed-size tile or slice (based on the tensor map's bounding box and other parameters) to the destination address `[%r326]` in cluster-shared memory. The exact data volume and layout transformation (if any, e.g., via optional modes like `.tile` or `.im2col`) are governed by the tensor map. Coordinates must fit within the tensor's defined ranges (e.g., [0, 2^16-1] for certain dimensions), and the operation is weakly ordered with no caching guarantees.
 <br/>
+
+For example, given a matrix D in global memory with shape [M=256, N=128] and a tile with shape [BLOCK_M=64, BLOCK_N=64]. Then,<br/>
+```C++
+num_tiles_m = 256 / 64 = 4
+num_tiles_n = 128 / 64 = 2
+```
+
+The following cp.async ops are required to fill out the matrix D: <br/>
+```C++
+/*
+    0           64          127
+  0 -------------------------
+    |           |           |
+    |  64x64    |   64x64   |
+    |           |           |
+ 64 -------------------------
+    |           |           |
+    |  64x64    |   64x64   |
+    |           |           |
+128 -------------------------
+    |           |           |
+    |  64x64    |   64x64   |
+    |           |           |
+192 -------------------------
+    |           |           |
+    |  64x64    |   64x64   |
+    |           |           |
+255 -------------------------
+*/
+
+// col = 0
+// row = 0
+cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r326], [%rd3, {0, 0}], [%r325];
+
+// col = 64
+// row = 0
+cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r326], [%rd3, {64, 0}], [%r325];
+
+// col = 0
+// row = 64
+cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r326], [%rd3, {0, 64}], [%r325];
+
+// col = 64
+// row = 64
+cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r326], [%rd3, {64, 64}], [%r325];
+
+// col = 0
+// row = 128
+cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r326], [%rd3, {0, 128}], [%r325];
+
+// col = 64
+// row = 128
+cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r326], [%rd3, {64, 128}], [%r325];
+
+// col = 0
+// row = 192
+cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r326], [%rd3, {0, 192}], [%r325];
+
+// col = 64
+// row = 192
+cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r326], [%rd3, {64, 192}], [%r325];
+```
 
 # shfl.sync
 ```MLIR
