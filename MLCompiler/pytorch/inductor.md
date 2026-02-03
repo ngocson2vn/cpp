@@ -2218,6 +2218,11 @@ print(cpp_command)
 ```
 Read more [amx.md](./amx.md)
 
+### How PyTorch detects AMX
+```Python
+torch.cpu._init_amx()
+```
+
 **Solution:**
 1. Ensure that the value of `vec_isa_cmd` is identical on both Snapshot and Runtime machines.
 2. Or on Runtime machines, copy `inductor` dir to `/path/to/Float/worker_0/`
