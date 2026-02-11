@@ -8,3 +8,23 @@ b1:00.0 3D controller: NVIDIA Corporation Device 2236 (rev a1)
 ca:00.0 3D controller: NVIDIA Corporation Device 2236 (rev a1)
 
 lspci -s 31:00.0 -vvv | grep Speed
+
+# Find pids using /dev/nvidia* files
+fuser -v /dev/nvidia*
+
+# nvidia-fabricmanager
+systemctl status nvidia-fabricmanager
+systemctl stop nvidia-fabricmanager
+systemctl start nvidia-fabricmanager
+
+# nv-hostengine
+nv-hostengine -d # start it
+nv-hostengine -t # terminate it
+
+# GPU monitoring services
+systemctl status oracle-cloud-agent.service
+systemctl start oracle-cloud-agent.service
+
+systemctl stop juno.service
+systemctl status juno.service
+systemctl start juno.service
