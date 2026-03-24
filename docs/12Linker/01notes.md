@@ -65,3 +65,19 @@ Dump of assembler code for function _ZN10tensorflow8internal15LogMessageFatalD1E
    0x00007fe1dd7bb48d <+61>:	jmp    0x7fe1dd7bb43c <_ZN10tensorflow8internal15LogMessageFatalD1Ev.cold.163>
 End of assembler dump.
 ```
+
+# Debug dynamic linker with LD_DEBUG and bpftrace
+**LD_DEBUG**:<br/>
+```Bash
+#!/bin/bash
+
+LD_DEBUG=libs,files python3.11 import_libpypilot_impl.py > debug_load_libpypilot.log 2>&1
+```
+
+**bpftrace**:<br/>
+```Bash
+# sudo apt install -y bpftrace
+sudo BPFTRACE_STRLEN=200 bpftrace \
+  -e 'uprobe:/lib64/ld-linux-x86-64.so.2:_dl_map_object { printf("Mapping requested for: %s\n", str(arg1)); }' \
+  -c "/usr/bin/env LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:/usr/local/cuda-12.4/extras/CUPTI/lib64 /data00/home/son.nguyen/.pyenv/versions/3.11.2/bin/python3.11 import_libpypilot_impl.py"
+```

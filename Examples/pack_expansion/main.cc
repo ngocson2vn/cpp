@@ -14,6 +14,9 @@ void addOperations() {
   // to compile a fold expression with a depth of more than 256 by default.
   // There seem to be no such limitations for initializer_list.
   (void)std::initializer_list<int>{0, (printType<Args>(), 0)...};
+
+  // (void)std::initializer_list<int>{0, (printType<Args>(), 0)...}; will become
+  // (void)std::initializer_list<int>{0, (printType<Arg0>(), 0), (printType<Arg1>(), 0), ..., (printType<ArgN>(), 0)};
 }
 
 int main(int argc, char** argv) {

@@ -5,6 +5,7 @@
             "includePath": [
                 "/usr/include",
                 "/usr/include/c++/12",
+                "/usr/local/cuda-12.4/include",
                 "${workspaceFolder}/**"
             ],
             "defines": [],
@@ -15,6 +16,7 @@
                 "path": [
                     "/usr/include",
                     "/usr/include/c++/12",
+                    "/usr/local/cuda-12.4/include",
                     "${workspaceFolder}/**"
                 ],
                 "databaseFilename": "${workspaceFolder}/.vscode/vc.db",

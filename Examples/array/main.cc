@@ -4,6 +4,10 @@
 
 class Currency {
  public:
+  Currency() : name_("") {
+
+  }
+
   Currency(const std::string& name) : name_(name) {
 
   }
@@ -41,4 +45,12 @@ int main(int argc, char** argv) {
   display_type<decltype(arr)>();
   display_type<decltype(x1)>();
   display_type<decltype(x2)>();
+
+  // Array access
+  printf("\nArray accesses\n");
+  Currency currencies[4][4];
+  display_type<decltype(currencies[0][0])>();
+  display_type<decltype(currencies[0][1])>();
+  display_type<decltype(currencies[1][0])>();
+  display_type<decltype(currencies[1][1])>();
 }

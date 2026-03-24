@@ -13,3 +13,5 @@ Examples/**/*.txt
 Examples/**/*.cxx
 .ipynb_checkpoints/
 site-packages
+refs/
+MLCompiler/pytorch/cpp_refs/**/build/
