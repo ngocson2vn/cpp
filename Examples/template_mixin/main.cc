@@ -10,11 +10,22 @@ class Base : public Mixins<Derived>... {
   void process() {
     static_cast<Derived*>(this)->process_impl();
   }
+
+ // Ensure that Base must be inherited
+ protected:
+  Base() = default;
+  ~Base() = default;
 };
 
 template <typename Derived>
 class TypeName {
  public:
+  std::string getTypeName() {
+    return type_name_;
+  }
+
+ // Ensure that TypeName must be inherited
+ protected:
   TypeName() {
     std::string func_name(__PRETTY_FUNCTION__);
     std::string tmp = func_name.substr(func_name.find_first_of("[") + 1);
@@ -22,9 +33,7 @@ class TypeName {
     std::cout << "Creating an instance of type = " << type_name_ << std::endl;
   }
 
-  std::string getTypeName() {
-    return type_name_;
-  }
+  ~TypeName() = default;
 
  private:
   std::string type_name_;
@@ -32,6 +41,16 @@ class TypeName {
 
 template <typename Derived>
 class Printer {
+ // Ensure that Printer must be inherited
+ protected:
+  Printer() = default;
+  ~Printer() = default;
+
+  // Default implementations
+  std::string dump() {
+    return "<<DEFAULT>>";
+  }
+
  public:
   void print() {
     auto derivedPtr = static_cast<Derived*>(this);
@@ -39,12 +58,6 @@ class Printer {
     std::cout << "Type = " << derivedPtr->getTypeName() << std::endl;
     std::cout << "==========================================" << std::endl;
     std::cout << derivedPtr->dump() << std::endl;
-  }
-
- protected:
-  // Default implementations
-  std::string dump() {
-    return "<<DEFAULT>>";
   }
 };
 
