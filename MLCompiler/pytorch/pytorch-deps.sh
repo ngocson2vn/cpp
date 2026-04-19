@@ -2,7 +2,7 @@
 pyenv install 3.11.2
 unset http_proxy https_proxy
 pip install --upgrade pip
-pip install numpy
+pip install numpy filelock fsspec jinja2 networkx
 
 # cuda-deps
 ./cuda-deps.sh

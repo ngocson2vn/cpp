@@ -332,3 +332,43 @@ The **static type checker** (e.g., **mypy**, **Pyright**, or IDEs like **PyCharm
 The most fundamental difference is their intended audience:
 - `__str__` is for human-readable output, often used when you want to display an object to an end-user. Think of it as a "nice" string representation.
 - `__repr__` is for unambiguous output, primarily used for developers and debugging. It should ideally be a string that, if passed to `eval()`, would recreate the object (though this isn't always strictly possible or desirable). Think of it as a "technical" string representation.
+
+# Plot with plotext
+```Bash
+pip install plotext
+```
+
+Bar graph:
+```Python
+import plotext as plt
+data = [10, 20, 15, 30, 25]
+plt.bar(range(len(data)), data)
+plt.show()
+```
+
+Line graph:
+```Python
+import plotext as plt
+MAX_DATA_POINT = 10000
+
+log_file = "log/py_master.stdout"
+DELIMITER_STRING = "ipc_sync_duration="
+
+fd = open(log_file)
+durations = []
+for line in fd:
+  if DELIMITER_STRING in line:
+    try:
+      v = int(line.split(DELIMITER_STRING)[1].strip())
+      durations.append(v)
+    except:
+      pass
+  
+  if len(durations) == MAX_DATA_POINT:
+    break
+
+print()
+plt.plot(range(len(durations)), durations)
+plt.show()
+print()
+```

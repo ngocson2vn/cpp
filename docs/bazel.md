@@ -1,4 +1,13 @@
 # Bazel
+
+# Install
+```Bash
+wget https://github.com/bazelbuild/bazelisk/releases/download/v1.28.1/bazelisk-linux-amd64
+chmod +x bazelisk-linux-amd64
+sudo cp bazelisk-linux-amd64 /usr/bin/bazel
+bazel --version
+```
+
 ```Bash
 # You can find logs in the output base for the workspace, which for Linux is typically $HOME/.cache/bazel/_bazel_$USER/<MD5 sum of workspace path>/
 
