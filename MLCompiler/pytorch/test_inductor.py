@@ -1,6 +1,8 @@
 import os
 import shutil
 
+from .ext import convert_to_bytes
+
 debug_dir = "./debug_dir"
 
 if os.getenv("VSCODE_MODE", "false") == "true" and os.path.exists(debug_dir):
@@ -40,7 +42,7 @@ torch._inductor.config._pre_fusion_custom_pass = CustomFusion.fuse
 import ipdb
 
 torch.set_float32_matmul_precision('high')
-logging.getLogger("torch._inductor.scheduler").setLevel(logging.DEBUG)
+# logging.getLogger("torch._inductor.scheduler").setLevel(logging.DEBUG)
 # import torch._inductor.scheduler
 # torch._inductor.scheduler.fusion_log.setLevel(logging.DEBUG)
 
@@ -64,7 +66,8 @@ class ToyModule(nn.Module):
     tmp1 = torch.sum(tmp0, 1)
 
     tmp2 = torch.sigmoid(tmp1)
-    return tmp2
+    keys = convert_to_bytes(tmp2)
+    return keys
     # tmp3 = torch.sum(tmp2, 0)
 
     # tmp4 = torch.sigmoid(tmp3)

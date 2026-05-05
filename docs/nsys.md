@@ -11,6 +11,8 @@ with torch.no_grad(), torch.autograd.profiler.emit_nvtx():
 
 If the app is written in C++, then use the corresponding NVTX C APIs:
 ```C++
+#include <nvtx3/nvToolsExt.h>
+
 nvtxRangePushA("ipc_sync");
 std::unique_ptr<IOMessage, std::function<void(IOMessage*)>> response = ipc->ipc_sync(builder.message());
 nvtxRangePop();
@@ -27,19 +29,38 @@ Please note that both `nsys launch` and `nsys xxx` must use the same env var `TM
 ```Bash
 # Terminal 1
 nsys launch --session-new=master --trace=cuda,nvtx,osrt --python-sampling=true python3 /path/to/app.py
-
 ```
+
+```Python
+    begin_cmd = [
+        "/usr/bin/numactl",
+        "--interleave=all",
+    ],
+    if os.getenv("NSYS_LAUNCH", "0") in ["1", "true"]:
+        begin_cmd = [
+            "/usr/local/cuda-13.1/bin/nsys",
+            "launch",
+            "--session-new=master",
+            "--trace=cuda,nvtx,osrt",
+            "--python-sampling=true"
+        ]
+    cmd = begin_cmd + [
+        "python3",
+        f"{start_script}",
+    ]
+```
+
 ## Step 4: Collect profiling data
 ```Bash
 # Terminal 2
-nsys sessions list
-nsys status --session=master
+/usr/local/cuda-13.1/bin/nsys sessions list
+/usr/local/cuda-13.1/bin/nsys status --session=master
 
-nsys start --session=master --output=./pilot_main_master --force-overwrite=true --sample=cpu --backtrace=dwarf
-nsys status --session=master
+/usr/local/cuda-13.1/bin/nsys start --session=master --output=./pilot_main --force-overwrite=true --sample=cpu --backtrace=dwarf
+/usr/local/cuda-13.1/bin/nsys status --session=master
 
 # Wait for a while
-nsys stop --session=master
+/usr/local/cuda-13.1/bin/nsys stop --session=master
 ```
 <br/>
 
