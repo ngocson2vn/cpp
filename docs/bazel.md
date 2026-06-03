@@ -107,3 +107,11 @@ export GCC_HOST_COMPILER_PATH="/data00/home/son.nguyen/workspace/deps/typhoon-bl
 # Edit .bazelrc
 build:linux --host_copt=-fno-stack-protector
 ```
+
+# Clang 20 relaxation
+Add the following lines to Bazel config file to relax some strict checks in clang 20
+```Bash
+build --copt="-Wno-unused-command-line-argument"
+build --copt="-Wno-c23-extensions"
+build --conlyopt="-Wno-c23-extensions"
+```
