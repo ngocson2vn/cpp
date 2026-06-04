@@ -131,3 +131,15 @@ build --copt="-Wno-unused-command-line-argument"
 build --copt="-Wno-c23-extensions"
 build --conlyopt="-Wno-c23-extensions"
 ```
+
+# Fix the source file 'path/to/source.cc' includes the following non-builtin files with absolute paths (if these are builtin files, make sure these paths are in your toolchain)
+Add builtin include path `"/usr/include"`: <br/>
+tensorflow/third_party/gpus/crosstool/BUILD.tpl
+```Python
+cc_toolchain_config(
+    name = "cc-compiler-local-config",
+    cpu = "local",
+    builtin_include_directories = [%{cxx_builtin_include_directories}, "/usr/include"],
+    # ...
+)
+```
