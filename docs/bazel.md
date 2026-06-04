@@ -51,6 +51,10 @@ bazel query "deps(//mlir/disc:disc_compiler_main)" 2>&1 | grep libtensorflow_fra
 
 # TensorFlow
 ```Bash
+bvc clone inf/blade/blade_build /opt/tiger/typhoon-blade
+export no_proxy="dl.google.com,storage.googleapis.com,developer.download.nvidia.com,developer.download.nvidia.cn"
+
+
 export CUDA_HOME=${CUDA_HOME:-/usr/local/cuda-12.4/}
 export CUDA_TOOLKIT_PATH="${CUDA_HOME}"
 export TF_CUDA_HOME=${CUDA_HOME} # for cuda_supplement_configure.bzl
@@ -86,6 +90,18 @@ SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/kernels/linalg/matrix_band_part_
 SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/kernels/scan_ops.cc
 eval "${BAZEL_BIN} build ${BAZEL_JOBS_LIMIT} --config=opt --linkopt=-g --per_file_copt=${SRC_FILE_LIST}@-O0,-g,-fno-inline --strip=never --verbose_failures //tensorflow:libtensorflow_cc.so"
 ```
+
+Add builtin include path `"/usr/include"`: <br/>
+tensorflow/third_party/gpus/crosstool/BUILD.tpl
+```Python
+cc_toolchain_config(
+    name = "cc-compiler-local-config",
+    cpu = "local",
+    builtin_include_directories = [%{cxx_builtin_include_directories}, "/usr/include"],
+    # ...
+)
+```
+
 
 # Common repos and targets
 ```Python

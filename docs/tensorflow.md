@@ -8,3 +8,14 @@ The CUDA_ERROR_ILLEGAL_ADDRESS only occurs when the GPU memory address is not in
 ```C++
 gpu_options->set_per_process_gpu_memory_fraction(static_cast<float>(options.gpu_memory_percent) / 100.0);
 ```
+
+# Search for an op definition:
+Op definition:
+```
+REGISTER_OP("TensorScatterUpdate")
+```
+
+Kernel definition:
+```
+Name("TensorScatterUpdate")
+```
