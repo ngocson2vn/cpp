@@ -91,18 +91,6 @@ SRC_FILE_LIST=${SRC_FILE_LIST},+tensorflow/core/kernels/scan_ops.cc
 eval "${BAZEL_BIN} build ${BAZEL_JOBS_LIMIT} --config=opt --linkopt=-g --per_file_copt=${SRC_FILE_LIST}@-O0,-g,-fno-inline --strip=never --verbose_failures //tensorflow:libtensorflow_cc.so"
 ```
 
-Add builtin include path `"/usr/include"`: <br/>
-tensorflow/third_party/gpus/crosstool/BUILD.tpl
-```Python
-cc_toolchain_config(
-    name = "cc-compiler-local-config",
-    cpu = "local",
-    builtin_include_directories = [%{cxx_builtin_include_directories}, "/usr/include"],
-    # ...
-)
-```
-
-
 # Common repos and targets
 ```Python
 "@com_google_protobuf//:protobuf",
@@ -133,13 +121,19 @@ build --conlyopt="-Wno-c23-extensions"
 ```
 
 # Fix the source file 'path/to/source.cc' includes the following non-builtin files with absolute paths (if these are builtin files, make sure these paths are in your toolchain)
-Add builtin include path `"/usr/include"`: <br/>
-tensorflow/third_party/gpus/crosstool/BUILD.tpl
-```Python
-cc_toolchain_config(
-    name = "cc-compiler-local-config",
-    cpu = "local",
-    builtin_include_directories = [%{cxx_builtin_include_directories}, "/usr/include"],
-    # ...
-)
+**Root Cause:** The clang version may not include '/usr/include' as a search path by default.
+
+**Fix:** Add builtin include path `"/usr/include"`: <br/>
+```Bash
+export CPATH=/usr/include
+export CPLUS_INCLUDE_PATH=/usr/include:/usr/include/c++/12
+```
+
+Double-check include paths:
+```Bash
+# C
+clang -E -x c - -v < /dev/null
+
+# C++
+clang++ -E -x c++ - -v < /dev/null
 ```

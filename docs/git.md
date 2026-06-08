@@ -112,3 +112,8 @@ Host github.com
     StrictHostKeyChecking No
     ProxyCommand ssh -qW %h:%p son.nguyen@internet_access_server
 ```
+
+# vim editor
+```Bash
+git config --global core.editor "vim"
+```
