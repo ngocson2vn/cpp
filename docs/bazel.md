@@ -137,3 +137,11 @@ clang -E -x c - -v < /dev/null
 # C++
 clang++ -E -x c++ - -v < /dev/null
 ```
+
+# Fix Network is unreachable (connect failed)
+Bazel fails to download some dependencies from github.com when running on an IPv6-only machine. <br/>
+Fix:
+```Bash
+# vim .bazelrc
+startup --host_jvm_args=-Djava.net.preferIPv6Addresses=system
+```
