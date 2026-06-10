@@ -145,3 +145,9 @@ Fix:
 # vim .bazelrc
 startup --host_jvm_args=-Djava.net.preferIPv6Addresses=system
 ```
+
+# JVM arguments
+```Bash
+JVM_ARGS="--host_jvm_args=-Djava.net.preferIPv6Addresses=system --host_jvm_args=-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts"
+bazel ${JVM_ARGS} build xxxx
+```
