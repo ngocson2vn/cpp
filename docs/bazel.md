@@ -104,12 +104,18 @@ eval "${BAZEL_BIN} build ${BAZEL_JOBS_LIMIT} --config=opt --linkopt=-g --per_fil
 ```Bash
 # Real path to the compiler (Cannot use symlink)
 export GCC_HOST_COMPILER_PATH="/data00/home/son.nguyen/workspace/deps/typhoon-blade/gccs/x86_64-x86_64-gcc-830/bin/x86_64-linux-gnu-gcc-8.3.0"
+export GCC_HOST_COMPILER_PREFIX="/opt/tiger/typhoon-blade/gccs/x86_64-x86_64-gcc-830/bin"
 ```
 
 # Fix undefined reference to __stack_chk_guard
 ```Bash
 # Edit .bazelrc
-build:linux --host_copt=-fno-stack-protector
+build:linux --host_copt=-fno-stack-protector --host_cxxopt=-fno-stack-protector
+```
+
+Or
+```
+bazel build TARGET --copt=-fno-stack-protector --cxxopt=-fno-stack-protector --host_copt=-fno-stack-protector --host_cxxopt=-fno-stack-protector"
 ```
 
 # Clang 20 relaxation

@@ -4,6 +4,9 @@ git submodule add -f https://github.com/tensorflow/tensorflow.git third_party/te
 git config -f .gitmodules submodule.third_party/tensorflow.shallow true
 git submodule update --init --recursive
 
+# Septh 1
+git submodule add --depth 1 -f https://github.com/tensorflow/tensorflow.git third_party/tensorflow
+
 ## Manual way
 # 1. Create .gitmodules
 [submodule "llvm-project"]

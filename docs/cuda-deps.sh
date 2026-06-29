@@ -4,6 +4,9 @@ wget https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/
 # cuda 12.8
 wget https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda_12.8.0_570.86.10_linux.run
 
+# cuda 13.0.1
+wget https://developer.download.nvidia.com/compute/cuda/13.0.1/local_installers/cuda_13.0.1_580.82.07_linux.run
+
 # cuda 13.1.0
 wget https://developer.download.nvidia.com/compute/cuda/13.1.0/local_installers/cuda_13.1.0_590.44.01_linux.run
 

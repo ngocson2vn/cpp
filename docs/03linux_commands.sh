@@ -34,3 +34,20 @@ sudo apt install krb5-user
 
 # add-apt-repository
 sudo apt install software-properties-common
+
+
+
+apt update
+apt install -y build-essential libssl-dev zlib1g-dev \
+libbz2-dev libreadline-dev libsqlite3-dev curl \
+libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+
+curl https://pyenv.run | bash
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init - bash)"
+
+pyenv install 3.9.19
+pyenv global 3.9.19
+python -V
+pip install --upgrade pip

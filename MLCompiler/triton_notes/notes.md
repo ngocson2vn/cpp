@@ -22,7 +22,7 @@
 # Environment Variables
 ```Bash
 #! Cache dir
-export TRITON_CACHE_DIR=./tmp
+export TRITON_CACHE_DIR=./tmp_triton_cache
 
 #! Autotune
 export TRITON_PRINT_AUTOTUNING="1"
