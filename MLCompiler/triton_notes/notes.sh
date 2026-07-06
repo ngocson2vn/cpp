@@ -1,6 +1,11 @@
-# Build
+# Build editable mode
 cd triton
 pip install -e .
+
+# Build a wheel file
+cd triton
+pip install build
+python -m build --wheel
 
 # Compile a sample kernel
 python3 python/triton/tools/compile.py \
