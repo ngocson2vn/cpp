@@ -743,3 +743,50 @@ The operands `[ %r82 + 0 ], %rd9, %rd10, %r83, %p13` map to the specific hardwar
 * **Purpose:** Controls the **Accumulate** behavior.
 * **If True (1):**  (Add result to the existing value in TMEM).
 * **If False (0):**  (Overwrite the value in TMEM, effectively treating  as zero).
+
+# mad
+mad
+
+Multiply two values, optionally extract the high or low half of the intermediate result, and add a third value.
+
+Syntax
+```MLIR
+mad.mode.type  d, a, b, c;
+mad.hi.sat.s32 d, a, b, c;
+
+.mode = { .hi, .lo, .wide };
+.type = { .u16, .u32, .u64,
+          .s16, .s32, .s64 };
+```
+
+Description
+
+Multiplies two values, optionally extracts the high or low half of the intermediate result, and adds a third value. Writes the result into a destination register.
+
+Semantics
+```MLIR
+t = a * b;
+n = bitwidth of type;
+d = t + c;           // for .wide
+d = t<2n-1..n> + c;  // for .hi variant
+d = t<n-1..0> + c;   // for .lo variant
+```
+
+Notes
+
+The type of the operation represents the types of the a and b operands. If .hi or .lo is specified, then d and c are the same size as a and b, and either the upper or lower half of the result is written to the destination register. If .wide is specified, then d and c are twice as wide as a and b to receive the result of the multiplication.
+
+The .wide suffix is supported only for 16-bit and 32-bit integer types.
+
+Saturation modifier:
+
+.sat
+limits result to MININT..MAXINT (no overflow) for the size of the operation.
+
+Applies only to .s32 type in .hi mode.
+
+Examples
+```MLIR
+@p  mad.lo.s32 d,a,b,c;
+    mad.lo.s32 r,p,q,r;
+```
