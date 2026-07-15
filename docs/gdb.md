@@ -62,3 +62,31 @@ Line 697 of "/path/to/worker.cc"
    and ends at 0x1ec000 <_Zxxx+3956>.
 ```
 Line 697 of "/path/to/worker.cc" was compiled into an instruction block (starts at address 0x1ebf74, and ends at 0x1ec000).
+
+# Get core of a Python script
+```Python
+    cmd = [
+        "/usr/bin/gdb",
+        "-ex",
+        "run",
+        "-ex",
+        "gcore worker.core",
+        "--args",
+        "python3",
+        f"/path/to/worker.py",
+        f"--model_name={model_name}",
+        f"--model_meta_dir={model_meta_dir}",
+        f"--metrics_prefix={metrics_prefix}",
+        f"--profiler_config={os.getenv('PROFILER_CONFIG', '')}",
+        f"--use_parallel={1 if use_parallel else 0}",
+    ]
+    stdout_file = open(stdout_filepath, "a")
+    stderr_file = open(stderr_filepath, "a")
+    process = subprocess.Popen(
+        cmd,
+        env=env,
+        stdout=stdout_file,
+        stderr=stderr_file,
+        start_new_session=True,
+    )
+```
