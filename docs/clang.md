@@ -16,6 +16,8 @@ export CPLUS_INCLUDE_PATH=/usr/include:/usr/include/c++/12
 
 # Format
 ```Bash
-COMMIT_HASH=730357c067a72b416145a019a2510c169d5e58c8
+COMMIT_HASH=9cc02903e9cf7a3d073c60a97033f0e4109a4863
 git --no-pager show --pretty="" --name-only ${COMMIT_HASH} | grep -E '\.h|\.cc' | xargs -I {} clang-format -i -style=file {}
+
+git --no-pager show --pretty="" --name-only HEAD | grep -E '\.h|\.cc' | xargs -I {} clang-format -i -style=file {}
 ```

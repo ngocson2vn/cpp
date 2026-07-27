@@ -139,10 +139,17 @@ readelf -sW F14Table.cpp.o | c++filt | grep F14LinkCheck
 # In this case F14IntrinsicsMode = 2
 ```
 
-Step 2: Define required variables at compile time
+Step 2: Quick fix: `return F14IntrinsicsMode::SimdAndCrc`
 ```C++
-# folly/include/folly/Portability.h
-#ifndef __SSE4_2__
-#define __SSE4_2__
-#endif
+// vim folly/container/detail/F14IntrinsicsAvailability.h
+
+static constexpr F14IntrinsicsMode getF14IntrinsicsMode() {
+// #if !FOLLY_F14_VECTOR_INTRINSICS_AVAILABLE
+//   return F14IntrinsicsMode::None;
+// #elif !FOLLY_F14_CRC_INTRINSIC_AVAILABLE
+//   return F14IntrinsicsMode::Simd;
+// #else
+  return F14IntrinsicsMode::SimdAndCrc;
+// #endif
+}
 ```

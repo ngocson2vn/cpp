@@ -9,6 +9,7 @@ pip install numpy filelock fsspec jinja2 networkx
 
 # libomp
 apt install -y libomp-dev
+apt install libomp5
 ln -sf /usr/lib/llvm-14/lib/libomp.so.5 /lib/x86_64-linux-gnu/libomp.so
 
 # pytorch

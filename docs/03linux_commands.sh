@@ -51,3 +51,13 @@ pyenv install 3.9.19
 pyenv global 3.9.19
 python -V
 pip install --upgrade pip
+
+
+#==========================================================================================
+# ps
+#==========================================================================================
+#pstree belongs to psmisc
+apt install psmisc
+
+# pstree - show commands
+pstree -a $pid
