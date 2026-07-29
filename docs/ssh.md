@@ -34,3 +34,22 @@ If TMOUT is set to a positive integer (e.g., TMOUT=900 for 15 minutes), and no i
 - A value of 0 disables the timeout (unlimited idle time).
 - If unset, there's no timeout by default.
 - It's read-only in some configurations, meaning you can't change it mid-session, but you can unset it or override it in shell configuration files.
+
+
+# Test ssh proxy
+Tunnel: `MacBook -> proxy -> target`
+```Bash
+# Test if proxy is working
+ssh -N -D 1080 son.nguyen@proxy.laniakea.com
+
+# Get verbose
+ssh -vvv \
+  -o ConnectTimeout=10 \
+  -W '[IPv6]:22' \
+  proxy.laniakea.com
+
+# -D 1080: Creates a local SOCKS proxy on port 1080.
+# -N: Prevents requesting a shell session (fixes your specific error).
+# -v: Enables verbose mode so you can see if the tunnel sets up successfully.
+```
+
