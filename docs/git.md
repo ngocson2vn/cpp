@@ -4,7 +4,7 @@ git submodule add -f https://github.com/tensorflow/tensorflow.git third_party/te
 git config -f .gitmodules submodule.third_party/tensorflow.shallow true
 git submodule update --init --recursive
 
-# Septh 1
+# Depth 1
 git submodule add --depth 1 -f https://github.com/tensorflow/tensorflow.git third_party/tensorflow
 
 ## Manual way
@@ -54,7 +54,7 @@ git commit --amend
 ```
 
 # git delete untracked files
-git ls-files --others --exclude-standard | xargs rm -rf
+git ls-files --others --exclude-standard | xargs rm -rvf
 
 # git search by commit message
 git log --all --grep="message"

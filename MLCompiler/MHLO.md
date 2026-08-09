@@ -7,6 +7,44 @@ https://github.com/tensorflow/mlir-hlo
 - MLIR-HLO aims to provide an end-to-end compiler for CPU and GPU, as well as building reusable blocks for other accelerators. This is heavily inspired by the success of XLA.
 <br/><br/>
 
+## dynamic_broadcast_in_dim
+Explain the following MLIR IR:
+%22 = "mhlo.dynamic_broadcast_in_dim"(%extracted_slice_35, %19) {broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>} : (tensor<?x1xf32>, tensor<2xindex>) -> tensor<?x30xf32>
+
+**`mhlo.dynamic_broadcast_in_dim`** expands (broadcasts) a tensor to a larger shape, where the target shape is supplied dynamically at runtime.
+
+### Breakdown of the operation
+
+```mlir
+%22 = "mhlo.dynamic_broadcast_in_dim"(%extracted_slice_35, %19)
+  {broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>}
+  : (tensor<?x1xf32>, tensor<2xindex>) -> tensor<?x30xf32>
+```
+
+| Part | Meaning |
+|------|---------|
+| `%extracted_slice_35` | Input tensor of shape `? × 1` (`f32`) |
+| `%19` | Runtime shape tensor of type `tensor<2xindex>` that holds the concrete output dimensions (size of dim 0 and size of dim 1) |
+| `broadcast_dimensions = [0, 1]` | Maps every dimension of the input onto the corresponding dimension of the output |
+| Result `%22` | Tensor of shape `? × 30` |
+
+### What the broadcast does
+
+- Input rank = 2, output rank = 2, and the mapping is the identity (`[0, 1]`).
+- Dimension 0 (`?`) is **copied as-is**: the dynamic size coming from the input must equal the dynamic size supplied by `%19[0]`.
+- Dimension 1 (size 1) is **expanded** to size 30: the single value in that dimension is repeated 30 times.
+
+In other words, a column vector of shape `[N, 1]` is turned into a matrix of shape `[N, 30]` by replicating the column 30 times.
+
+### Typical use case
+
+This pattern appears frequently when a per-example scalar or vector feature (the `?×1` slice) needs to be expanded so it can be added to / multiplied with a wider tensor that has a fixed trailing dimension of 30 (e.g. a hidden size, number of classes, or feature channels).
+
+### Static vs dynamic
+
+- Ordinary `mhlo.broadcast_in_dim` would have a compile-time constant output shape.
+- The `dynamic_` variant is used when at least one output dimension is unknown until runtime; the second operand (`%19`) supplies those sizes.
+
 # Workflow
 When TensorFlow integrates with MLIR-HLO, the workflow is as follows:
 
@@ -181,7 +219,6 @@ func.func @predict_online_0(%arg0: tensor<?x4xf32> {input.fake_symbolic_shape = 
 
 Question: How to lower from **MLIR-TF dialect** to this representation?
 <br/><br/>
-
 
 
 

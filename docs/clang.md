@@ -1,3 +1,6 @@
+# Install clang and clang++
+Runbook: `docs/llvm.sh`
+
 # Add extra include paths
 Check default include paths:
 ```Bash
