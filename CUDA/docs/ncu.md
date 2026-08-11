@@ -22,7 +22,9 @@ sys.exit(0)
 Startup script:
 ```Python
 script_path = "/path/to/worker.py"
-cmd = [
+
+# ncu
+begin_cmd = [
   "/usr/local/cuda-13.3/bin/ncu",
   "--nvtx",
   "--profile-from-start",
@@ -32,6 +34,9 @@ cmd = [
   "-f",
   "-o",
   "/data02/home/son.nguyen/workspace/torch_dev/pypilot_gpu/manhattan_worker_profile",
+]
+
+cmd = begin_cmd + [
   "python3",
   script_path
 ]
