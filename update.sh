@@ -10,12 +10,19 @@ echo "==========================================================================
 echo
 
 git add -u
+# Add new files
+for f in $(git status | grep -E '.*\.py|.*\.sh' | grep -v 'modified' | grep -v 'new file')
+do
+  git add $f
+done
 
 echo "================================================================================"
 echo "2. Next status"
 echo "================================================================================"
 git status
-git commit -m "Update"
+today=$(date "+%Y%m%d")
+git commit -m "Update on ${today}"
+
 git push
 echo "================================================================================"
 echo

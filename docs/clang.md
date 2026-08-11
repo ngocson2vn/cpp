@@ -1,5 +1,5 @@
 # Install clang and clang++
-Runbook: `docs/llvm.sh`
+Runbook: [./llvm.sh](./llvm.sh)
 
 # Add extra include paths
 Check default include paths:
@@ -24,3 +24,11 @@ git --no-pager show --pretty="" --name-only ${COMMIT_HASH} | grep -E '\.h|\.cc' 
 
 git --no-pager show --pretty="" --name-only HEAD | grep -E '\.h|\.cc' | xargs -I {} clang-format -i -style=file {}
 ```
+
+# _GLIBCXX17_DEPRECATED
+```cpp
+/usr/lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12/bits/c++config.h:119:34: note: expanded from macro '_GLIBCXX17_DEPRECATED'
+  119 | # define _GLIBCXX17_DEPRECATED [[__deprecated__]]
+```
+To suppress this warning, add `-Wno-deprecated-declarations`.
+
