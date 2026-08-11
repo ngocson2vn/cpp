@@ -11,7 +11,7 @@ echo
 
 git add -u
 # Add new files
-for f in $(git status | grep -E '.*\.py|.*\.sh' | grep -v 'modified' | grep -v 'new file')
+for f in $(git status | grep -E '.*\.py|.*\.sh|.*\.md' | grep -v 'modified' | grep -v 'new file')
 do
   git add $f
 done
