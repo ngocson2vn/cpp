@@ -102,38 +102,4 @@ nsys export --type sqlite worker_profile.nsys-rep
 
 This method uses the standard library to execute the query and iterates through the results to print them row by row.
 
-```python
-import sqlite3
-
-# 1. Connect to the exported SQLite database
-db_path = "worker_profile.sqlite"
-conn = sqlite3.connect(db_path)
-cursor = conn.cursor()
-
-# 2. Define the SQL query
-query = """
-SELECT 
-    s.value AS Kernel_Name, 
-    k.gridX || 'x' || k.gridY || 'x' || k.gridZ AS Grid_Size 
-FROM CUPTI_ACTIVITY_KIND_KERNEL AS k 
-JOIN StringIds AS s ON k.demangledName = s.id;
-"""
-
-# 3. Execute the query and fetch the results
-cursor.execute(query)
-results = cursor.fetchall()
-
-# 4. Print the results in a formatted table
-print(f"{'Kernel_Name':<60} | {'Grid_Size'}")
-print("-" * 80)
-for row in results:
-    kernel_name = row[0]
-    # Truncate extremely long kernel names for display purposes
-    if len(kernel_name) > 58:
-        kernel_name = kernel_name[:55] + "..."
-    grid_size = row[1]
-    print(f"{kernel_name:<60} | {grid_size}")
-
-# 5. Close the connection
-conn.close()
-```
+Check out [../scripts/analyze_nsys_report.py](../scripts/analyze_nsys_report.py)
