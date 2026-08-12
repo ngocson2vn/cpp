@@ -1555,6 +1555,20 @@ def triton_config(
 ```
 
 # Get compiled module path
+## Approach 1: find the biggest python module
+```bash
+cd aot_compile_cache
+find inductor/ -type f -name "*.py" | xargs ls -1srt | sort -h | tail -3
+  68 inductor/xi/cxiepdlcy3cmcfmt2zsmpp2626a4aalqno3jqs5oxhevta6qnz6e.py
+3532 inductor/va/cvas5tpa26qsya46oufaz3kcssdc4pjfzs6w4po4khh35wqo4bws.py
+3676 inductor/ir/cirh3nvzssuakgjolcephnmihbvoe2w6jimuuoonfz44dhia2ueh.py
+```
+The last 2 modules are final model modules where the first one is for the first batch size of the test data.
+
+The second one is for handling dynamic batch size. This is the one used for inference.
+
+
+## Approach 1: print out the module path
 At runtime, the compiled module will be loaded by class SerializableCallable(torch.nn.Module)
 ```Python
 # site-packages/torch/_functorch/aot_autograd.py
