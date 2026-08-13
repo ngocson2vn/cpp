@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   DeviceProperties dp;
 
   LOG(level, "%s Starting...\n\n", argv[0]);
-  LOG(level, " CUDA Device Query (Runtime API) version (CUDART static linking)\n\n");
+  LOG(level, "CUDA Device Query (Runtime API) version (CUDART static linking)\n\n");
 
   int deviceCount = 0;
   cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
@@ -139,11 +139,12 @@ int main(int argc, char **argv) {
             (unsigned long long)deviceProp.totalGlobalMem);
   LOG(level, "%s", msg);
 
-  LOG(level, "  (%03d) Multiprocessors, (%03d) CUDA Cores/MP:    %d CUDA Cores\n",
-          deviceProp.multiProcessorCount,
-          _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor),
-          _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor) *
-              deviceProp.multiProcessorCount);
+  LOG(level, "  Number of SMs:                                 %d\n", deviceProp.multiProcessorCount);
+  // LOG(level, "  CUDA Cores/SM:    %d CUDA Cores\n",
+  // LOG(level, "  (%03d) CUDA Cores/SM:    %d CUDA Cores\n",
+  //         _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor),
+  //         _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor) *
+  //             deviceProp.multiProcessorCount);
 
   LOG(level, "  Memory Bus Width:                              %d-bit\n",
           deviceProp.memoryBusWidth);
@@ -277,7 +278,7 @@ int main(int argc, char **argv) {
     tensorCoresPerSM = 8; // Volta/Turing
   } else if (deviceProp.major == 8) { // Ampere (8.x)
     tensorCoresPerSM = 4; // Ampere
-  } else if (deviceProp.major == 9) {
+  } else if (deviceProp.major >= 9) {
     tensorCoresPerSM = 4; // Hopper
   } else {
     LOG(level, "  No Tensor Cores (pre-Volta architecture)\n");
@@ -303,23 +304,23 @@ int main(int argc, char **argv) {
       }
     }
 
-    // Show all the combinations of support P2P GPUs
-    int can_access_peer;
+    // // Show all the combinations of support P2P GPUs
+    // int can_access_peer;
 
-    if (gpu_p2p_count >= 2) {
-      for (int i = 0; i < gpu_p2p_count; i++) {
-        for (int j = 0; j < gpu_p2p_count; j++) {
-          if (gpuid[i] == gpuid[j]) {
-            continue;
-          }
-          checkCudaErrors(
-              cudaDeviceCanAccessPeer(&can_access_peer, gpuid[i], gpuid[j]));
-          LOG(level, "> Peer access from %s (GPU%d) -> %s (GPU%d) : %s\n",
-                 prop[gpuid[i]].name, gpuid[i], prop[gpuid[j]].name, gpuid[j],
-                 can_access_peer ? "Yes" : "No");
-        }
-      }
-    }
+    // if (gpu_p2p_count >= 2) {
+    //   for (int i = 0; i < gpu_p2p_count; i++) {
+    //     for (int j = 0; j < gpu_p2p_count; j++) {
+    //       if (gpuid[i] == gpuid[j]) {
+    //         continue;
+    //       }
+    //       checkCudaErrors(
+    //           cudaDeviceCanAccessPeer(&can_access_peer, gpuid[i], gpuid[j]));
+    //       LOG(level, "> Peer access from %s (GPU%d) -> %s (GPU%d) : %s\n",
+    //              prop[gpuid[i]].name, gpuid[i], prop[gpuid[j]].name, gpuid[j],
+    //              can_access_peer ? "Yes" : "No");
+    //     }
+    //   }
+    // }
   }
 
   // csv masterlog info
