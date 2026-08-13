@@ -144,13 +144,7 @@ int main(int argc, char **argv) {
           _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor),
           _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor) *
               deviceProp.multiProcessorCount);
-  LOG(level, 
-      "  GPU Max Clock rate:                            %.0f MHz (%0.2f GHz)\n",
-      deviceProp.clockRate * 1e-3f, deviceProp.clockRate * 1e-6f);
 
-  // This is supported in CUDA 5.0 (runtime API device properties)
-  LOG(level, "  Memory Clock rate:                             %.0f Mhz\n",
-          deviceProp.memoryClockRate * 1e-3f);
   LOG(level, "  Memory Bus Width:                              %d-bit\n",
           deviceProp.memoryBusWidth);
 
@@ -200,12 +194,6 @@ int main(int argc, char **argv) {
           deviceProp.memPitch);
   LOG(level, "  Texture alignment:                             %zu bytes\n",
           deviceProp.textureAlignment);
-  LOG(level, 
-      "  Concurrent copy and kernel execution:          %s with %d copy "
-      "engine(s)\n",
-      (deviceProp.deviceOverlap ? "Yes" : "No"), deviceProp.asyncEngineCount);
-  LOG(level, "  Run time limit on kernels:                     %s\n",
-          deviceProp.kernelExecTimeoutEnabled ? "Yes" : "No");
   LOG(level, "  Integrated GPU sharing Host Memory:            %s\n",
           deviceProp.integrated ? "Yes" : "No");
   LOG(level, "  Support host page-locked memory mapping:       %s\n",
@@ -222,26 +210,26 @@ int main(int argc, char **argv) {
           deviceProp.computePreemptionSupported ? "Yes" : "No");
   LOG(level, "  Supports Cooperative Kernel Launch:            %s\n",
           deviceProp.cooperativeLaunch ? "Yes" : "No");
-  LOG(level, "  Supports MultiDevice Co-op Kernel Launch:      %s\n",
-          deviceProp.cooperativeMultiDeviceLaunch ? "Yes" : "No");
   LOG(level, "  Device PCI Domain ID / Bus ID / location ID:   %d / %d / %d\n",
           deviceProp.pciDomainID, deviceProp.pciBusID, deviceProp.pciDeviceID);
 
-  // Estimate Tensor Cores per SM based on architecture
-  int tensorCoresPerSM = 0;
-  if (deviceProp.major == 7 && deviceProp.minor >= 0) { // Volta (7.0), Turing (7.5)
-    tensorCoresPerSM = 8; // Volta/Turing
-  } else if (deviceProp.major == 8) { // Ampere (8.x)
-    tensorCoresPerSM = 4; // Ampere
-  } else if (deviceProp.major == 9) {
-    tensorCoresPerSM = 4; // Hopper
-  } else {
-    LOG(level, "  No Tensor Cores (pre-Volta architecture)\n");
-  }
+#if (CUDART_VERSION < 13000)
+  LOG(level, 
+      "  GPU Max Clock rate:                            %.0f MHz (%0.2f GHz)\n",
+      deviceProp.clockRate * 1e-3f, deviceProp.clockRate * 1e-6f);
 
-  int totalTensorCores = deviceProp.multiProcessorCount * tensorCoresPerSM;
-  LOG(level, "  Tensor Cores per SM:                           %d\n", tensorCoresPerSM);
-  LOG(level, "  Total Tensor Cores:                            %d\n", totalTensorCores);
+  // This is supported in CUDA 5.0 (runtime API device properties)
+  LOG(level, "  Memory Clock rate:                             %.0f Mhz\n",
+          deviceProp.memoryClockRate * 1e-3f);
+
+  LOG(level, 
+      "  Concurrent copy and kernel execution:          %s with %d copy "
+      "engine(s)\n",
+      (deviceProp.deviceOverlap ? "Yes" : "No"), deviceProp.asyncEngineCount);
+  LOG(level, "  Run time limit on kernels:                     %s\n",
+          deviceProp.kernelExecTimeoutEnabled ? "Yes" : "No");
+  LOG(level, "  Supports MultiDevice Co-op Kernel Launch:      %s\n",
+          deviceProp.cooperativeMultiDeviceLaunch ? "Yes" : "No");
 
   //===========================================================================================
   // Tensor Core
@@ -281,7 +269,23 @@ int main(int argc, char **argv) {
     "Unknown", NULL};
   LOG(level, "  Compute Mode:\n");
   LOG(level, "     < %s >\n", sComputeMode[deviceProp.computeMode]);
+#endif
 
+  // Estimate Tensor Cores per SM based on architecture
+  int tensorCoresPerSM = 0;
+  if (deviceProp.major == 7 && deviceProp.minor >= 0) { // Volta (7.0), Turing (7.5)
+    tensorCoresPerSM = 8; // Volta/Turing
+  } else if (deviceProp.major == 8) { // Ampere (8.x)
+    tensorCoresPerSM = 4; // Ampere
+  } else if (deviceProp.major == 9) {
+    tensorCoresPerSM = 4; // Hopper
+  } else {
+    LOG(level, "  No Tensor Cores (pre-Volta architecture)\n");
+  }
+
+  int totalTensorCores = deviceProp.multiProcessorCount * tensorCoresPerSM;
+  LOG(level, "  Tensor Cores per SM:                           %d\n", tensorCoresPerSM);
+  LOG(level, "  Total Tensor Cores:                            %d\n", totalTensorCores);
 
   // If there are 2 or more GPUs, query to determine whether RDMA is supported
   if (deviceCount >= 2) {
