@@ -53,3 +53,9 @@ ssh -vvv \
 # -v: Enables verbose mode so you can see if the tunnel sets up successfully.
 ```
 
+# VSCode reports that port forwarding is disabled
+Solution:
+
+1. Ensure that server side sshd_config includes `AllowTCPForwarding yes`
+
+2. Remove the host from client site `~/.ssh/known_hosts`
