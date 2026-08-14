@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace gpu {
 namespace monitor {
@@ -9,7 +9,7 @@ namespace monitor {
 class GpuMonitorImpl;
 
 class GpuMonitor {
- public:
+public:
   GpuMonitor();
 
   ~GpuMonitor();
@@ -19,11 +19,11 @@ class GpuMonitor {
 
   int get_device_count();
 
-  const char* get_device_uuid(unsigned int device_idx) const;
+  const char *get_device_uuid(unsigned int device_idx) const;
 
   std::vector<int> get_device_ids();
 
- private:
+private:
   std::unique_ptr<GpuMonitorImpl> impl;
 };
 

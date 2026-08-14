@@ -13,7 +13,6 @@
 
 #define LOG_INFO(format, ...) fprintf(stdout, format, ##__VA_ARGS__);
 
-
 __global__ void makeAllSMsActive(uint64_t N) {
   uint64_t prev = 0;
   uint64_t next = 1;
@@ -26,7 +25,7 @@ __global__ void makeAllSMsActive(uint64_t N) {
     }
 
     // Force memory synchronization fence to stop compiler movement
-    asm volatile("" : : : "memory"); 
+    asm volatile("" : : : "memory");
   }
 }
 
@@ -43,7 +42,7 @@ int main(int argc, char **argv) {
 
   int driverVersion = 0;
   cudaDriverGetVersion(&driverVersion);
-  
+
   int runtimeVersion = 0;
   cudaRuntimeGetVersion(&runtimeVersion);
 
@@ -56,12 +55,11 @@ int main(int argc, char **argv) {
 
   LOG_INFO("  Number of SMs:                                 %d\n",
            deviceProp.multiProcessorCount);
-  
+
   int totalSMs = deviceProp.multiProcessorCount;
 
   gpu::monitor::GpuMonitor gpuMonitor;
   gpuMonitor.start();
-
 
   // Create a stream
   cudaStream_t stream;
@@ -77,8 +75,9 @@ int main(int argc, char **argv) {
   config.attrs = attribute;
   config.numAttrs = 1;
 
-  // The grid dimension is not affected by cluster launch, and is still enumerated using number of blocks.
-  // The grid dimension should be a multiple of cluster size.
+  // The grid dimension is not affected by cluster launch, and is still
+  // enumerated using number of blocks. The grid dimension should be a multiple
+  // of cluster size.
   config.gridDim = dim3(totalSMs, 1, 1);
 
   // Threadblock: 128 threads (4 warps) for one warp-group
@@ -90,13 +89,7 @@ int main(int argc, char **argv) {
   checkCudaErrors(cudaEventCreate(&event));
 
   uint64_t N = 1000000;
-  checkCudaErrors(
-    cudaLaunchKernelEx(
-      &config,
-      &makeAllSMsActive,
-      N
-    )
-  );
+  checkCudaErrors(cudaLaunchKernelEx(&config, &makeAllSMsActive, N));
 
   LOG_INFO("\nLaunched makeAllSMsActive\n");
   checkCudaErrors(cudaEventRecord(event, stream));

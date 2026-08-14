@@ -1,11 +1,11 @@
-#include <iostream>
 #include <chrono>
 #include <condition_variable>
+#include <cstdlib>
+#include <iostream>
 #include <random>
 #include <stdexcept>
 #include <thread>
 #include <vector>
-#include <cstdlib>
 
 #include <nvml.h>
 #include <pthread.h>
@@ -119,9 +119,6 @@ private:
       // update query value every 30 seconds
       if (now > next_query) {
         query_sm_active();
-      }
-
-      if (now > next_query) {
         next_query += QUERY_INTERVAL;
       }
     }
