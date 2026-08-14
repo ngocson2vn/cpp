@@ -17,21 +17,7 @@ namespace monitor {
 
 class GpuMonitorImpl {
 public:
-  GpuMonitorImpl() {
-    // 1. Initialize NVML
-    nvmlReturn_t result = nvmlInit();
-    if (result != NVML_SUCCESS) {
-      std::cerr << "NVML Init Failed: " << nvmlErrorString(result) << "\n";
-      std::exit(EXIT_FAILURE);
-    }
-
-    // 2. Get Device Handle
-    nvmlDeviceGetHandleByIndex(0, &device_);
-
-    // 3. Allocate tracking sample buffers
-    nvmlGpmSampleAlloc(&sample1_);
-    nvmlGpmSampleAlloc(&sample2_);
-  }
+  GpuMonitorImpl() = default;
 
   ~GpuMonitorImpl() {
     exit_signal_.notify_one();
@@ -48,12 +34,29 @@ public:
   }
 
   // start background monitor thread
-  void start() {
+  void start(int dev_idx) {
+    dev_idx_ = dev_idx;
+
+    // Initialize NVML
+    nvmlReturn_t result = nvmlInit();
+    if (result != NVML_SUCCESS) {
+      std::cerr << "NVML Init Failed: " << nvmlErrorString(result) << "\n";
+      std::exit(EXIT_FAILURE);
+    }
+
+    // Get Device Handle
+    nvmlDeviceGetHandleByIndex(dev_idx, &device_);
+
+    // Allocate tracking sample buffers
+    nvmlGpmSampleAlloc(&sample1_);
+    nvmlGpmSampleAlloc(&sample2_);
+
     running_ = true;
     monitor_thread_ = new std::thread(&GpuMonitorImpl::monitor, this);
   }
 
 private:
+  int dev_idx_ = 0;
   nvmlDevice_t device_;
   nvmlGpmSample_t sample1_;
   nvmlGpmSample_t sample2_;
@@ -106,6 +109,8 @@ private:
     const int SAMPLING_INTERVAL = 1; // in Second
     const int QUERY_INTERVAL = 3;   // in Second
     pthread_setname_np(pthread_self(), "GPU Monitor");
+    std::string start_str = std::string("\nStart GPU Monitor for device ") + std::to_string(dev_idx_) + "\n";
+    std::cout << start_str;
 
     using namespace std::chrono;
     // align to each 30 seconds
@@ -117,6 +122,7 @@ private:
           exit_signal_.wait_for(exit_lock,
                                 std::chrono::seconds(SAMPLING_INTERVAL)) !=
               std::cv_status::timeout) {
+        std::cout << "Exit GPU Monitor\n";
         return;
       }
       time_t now = system_clock::to_time_t(system_clock::now());
@@ -134,7 +140,7 @@ GpuMonitor::GpuMonitor() { impl = std::make_unique<GpuMonitorImpl>(); }
 
 GpuMonitor::~GpuMonitor() {}
 
-void GpuMonitor::start() { impl->start(); }
+void GpuMonitor::start(int dev_idx) { impl->start(dev_idx); }
 
 } // namespace monitor
 } // namespace gpu

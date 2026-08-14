@@ -15,13 +15,7 @@ public:
   ~GpuMonitor();
 
   // start background monitor thread
-  void start();
-
-  int get_device_count();
-
-  const char *get_device_uuid(unsigned int device_idx) const;
-
-  std::vector<int> get_device_ids();
+  void start(int dev_idx);
 
 private:
   std::unique_ptr<GpuMonitorImpl> impl;

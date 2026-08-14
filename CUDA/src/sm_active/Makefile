@@ -17,6 +17,7 @@ endif
 
 main: main.cu gpu_monitor.cc
 	$(NVCC) $(NVCC_FLAGS) $(INCLUDE_DIRS) $(LIB_DIRS) -o main main.cu gpu_monitor.cc -lcudart -lnvidia-ml
+	patchelf --add-rpath ./lib main
 
 run: main
 	./main verbose

@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include <memory>
-#include <string>
+#include <vector>
 
 #include "gpu_monitor.h"
 
@@ -33,68 +33,83 @@ __global__ void makeAllSMsActive(uint64_t N) {
 // Program main
 ////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv) {
-  int dev = 0;
-  cudaSetDevice(dev);
+  int dev_count = 0;
+  checkCudaErrors(cudaGetDeviceCount(&dev_count));
 
-  cudaDeviceProp deviceProp;
-  cudaGetDeviceProperties(&deviceProp, dev);
-  LOG_INFO("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
-
-  int driverVersion = 0;
-  cudaDriverGetVersion(&driverVersion);
-
-  int runtimeVersion = 0;
-  cudaRuntimeGetVersion(&runtimeVersion);
-
-  LOG_INFO("  CUDA Driver Version / Runtime Version          %d.%d / %d.%d\n",
-           driverVersion / 1000, (driverVersion % 100) / 10,
-           runtimeVersion / 1000, (runtimeVersion % 100) / 10);
-
-  LOG_INFO("  CUDA Capability Major/Minor version number:    %d.%d\n",
-           deviceProp.major, deviceProp.minor);
-
-  LOG_INFO("  Number of SMs:                                 %d\n",
-           deviceProp.multiProcessorCount);
-
-  int totalSMs = deviceProp.multiProcessorCount;
+  std::vector<cudaEvent_t> cudaEvents;
+  int totalSMs = 0;
 
   gpu::monitor::GpuMonitor gpuMonitor;
-  gpuMonitor.start();
 
-  // Create a stream
-  cudaStream_t stream;
-  checkCudaErrors(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+  for (int dev = 0; dev < dev_count; dev++) {
+    checkCudaErrors(cudaSetDevice(dev));
 
-  // Kernel launch config
-  cudaLaunchConfig_t config = {0};
-  cudaLaunchAttribute attribute[1];
-  attribute[0].id = cudaLaunchAttributeClusterDimension;
-  attribute[0].val.clusterDim.x = 1; // Cluster size in X-dimension
-  attribute[0].val.clusterDim.y = 1;
-  attribute[0].val.clusterDim.z = 1;
-  config.attrs = attribute;
-  config.numAttrs = 1;
+    if (dev == 0) {
+      cudaDeviceProp deviceProp;
+      checkCudaErrors(cudaGetDeviceProperties(&deviceProp, dev));
+      LOG_INFO("\nDevice %d: \"%s\"\n", dev, deviceProp.name);
 
-  // The grid dimension is not affected by cluster launch, and is still
-  // enumerated using number of blocks. The grid dimension should be a multiple
-  // of cluster size.
-  config.gridDim = dim3(totalSMs, 1, 1);
+      int driverVersion = 0;
+      checkCudaErrors(cudaDriverGetVersion(&driverVersion));
 
-  // Threadblock: 128 threads (4 warps) for one warp-group
-  constexpr int THREADS_PER_BLOCK = 32;
-  config.blockDim = dim3(THREADS_PER_BLOCK);
-  config.stream = stream;
+      int runtimeVersion = 0;
+      checkCudaErrors(cudaRuntimeGetVersion(&runtimeVersion));
 
-  cudaEvent_t event;
-  checkCudaErrors(cudaEventCreate(&event));
+      LOG_INFO("  CUDA Driver Version / Runtime Version          %d.%d / %d.%d\n",
+              driverVersion / 1000, (driverVersion % 100) / 10,
+              runtimeVersion / 1000, (runtimeVersion % 100) / 10);
 
-  uint64_t N = 1000000;
-  checkCudaErrors(cudaLaunchKernelEx(&config, &makeAllSMsActive, N));
+      LOG_INFO("  CUDA Capability Major/Minor version number:    %d.%d\n",
+              deviceProp.major, deviceProp.minor);
 
-  LOG_INFO("\nLaunched makeAllSMsActive\n");
-  checkCudaErrors(cudaEventRecord(event, stream));
+      LOG_INFO("  Number of SMs:                                 %d\n",
+              deviceProp.multiProcessorCount);
 
-  checkCudaErrors(cudaEventSynchronize(event));
+      totalSMs = deviceProp.multiProcessorCount;
+    }
+
+    // Create a stream
+    cudaStream_t stream;
+    checkCudaErrors(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+
+    // Kernel launch config
+    cudaLaunchConfig_t config = {0};
+    cudaLaunchAttribute attribute[1];
+    attribute[0].id = cudaLaunchAttributeClusterDimension;
+    attribute[0].val.clusterDim.x = 1; // Cluster size in X-dimension
+    attribute[0].val.clusterDim.y = 1;
+    attribute[0].val.clusterDim.z = 1;
+    config.attrs = attribute;
+    config.numAttrs = 1;
+
+    // The grid dimension is not affected by cluster launch, and is still
+    // enumerated using number of blocks. The grid dimension should be a multiple
+    // of cluster size.
+    config.gridDim = dim3(totalSMs, 1, 1);
+
+    // Threadblock: 128 threads (4 warps) for one warp-group
+    constexpr int THREADS_PER_BLOCK = 32;
+    config.blockDim = dim3(THREADS_PER_BLOCK);
+    config.stream = stream;
+
+    cudaEvent_t event;
+    checkCudaErrors(cudaEventCreate(&event));
+
+    uint64_t N = 1000000;
+    checkCudaErrors(cudaLaunchKernelEx(&config, &makeAllSMsActive, N));
+
+    LOG_INFO("\nLaunched makeAllSMsActive on device %d\n", dev);
+    checkCudaErrors(cudaEventRecord(event, stream));
+
+    cudaEvents.push_back(event);
+  }
+
+  gpuMonitor.start(0);
+
+  for (auto& event : cudaEvents) {
+    checkCudaErrors(cudaEventSynchronize(event));
+  }
+
   LOG_INFO("DONE\n");
 
   // finish
