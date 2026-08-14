@@ -14,18 +14,15 @@
 #define LOG_INFO(format, ...) fprintf(stdout, format, ##__VA_ARGS__);
 
 __global__ void makeAllSMsActive(uint64_t N) {
-  uint64_t prev = 0;
-  uint64_t next = 1;
   uint64_t tmp = 0;
+  uint64_t prev = 0;
+  volatile uint64_t next = 1;
   while (true) {
     for (uint64_t i = 1; i < N; i++) {
       tmp = prev + next;
       prev = next;
       next = tmp;
     }
-
-    // Force memory synchronization fence to stop compiler movement
-    asm volatile("" : : : "memory");
   }
 }
 
