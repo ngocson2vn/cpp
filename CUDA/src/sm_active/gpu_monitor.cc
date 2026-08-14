@@ -1,0 +1,138 @@
+#include <iostream>
+#include <chrono>
+#include <condition_variable>
+#include <random>
+#include <stdexcept>
+#include <thread>
+#include <vector>
+#include <cstdlib>
+
+#include <nvml.h>
+#include <pthread.h>
+
+#include "gpu_monitor.h"
+
+namespace gpu {
+namespace monitor {
+
+class GpuMonitorImpl {
+public:
+  GpuMonitorImpl() {
+    // 1. Initialize NVML
+    nvmlReturn_t result = nvmlInit();
+    if (result != NVML_SUCCESS) {
+      std::cerr << "NVML Init Failed: " << nvmlErrorString(result) << "\n";
+      std::exit(EXIT_FAILURE);
+    }
+
+    // 2. Get Device Handle
+    nvmlDeviceGetHandleByIndex(0, &device_);
+
+    // 3. Allocate tracking sample buffers
+    nvmlGpmSampleAlloc(&sample1_);
+    nvmlGpmSampleAlloc(&sample2_);
+  }
+
+  ~GpuMonitorImpl() {
+    exit_signal_.notify_one();
+    running_ = false;
+    if (monitor_thread_) {
+      monitor_thread_->join();
+      delete monitor_thread_;
+      monitor_thread_ = nullptr;
+    }
+
+    nvmlGpmSampleFree(sample1_);
+    nvmlGpmSampleFree(sample2_);
+    nvmlShutdown();
+  }
+
+  // start background monitor thread
+  void start() {
+    running_ = true;
+    monitor_thread_ = new std::thread(&GpuMonitorImpl::monitor, this);
+  }
+
+private:
+  nvmlDevice_t device_;
+  nvmlGpmSample_t sample1_;
+  nvmlGpmSample_t sample2_;
+
+  // necessary elements for monitoring thread
+  volatile bool running_;
+  std::mutex exit_mutex_;
+  std::condition_variable exit_signal_;
+  std::thread *monitor_thread_ = nullptr;
+
+  void query_sm_active() {
+    // Capture the first hardware snapshot
+    nvmlGpmSampleGet(device_, sample1_);
+
+    // Wait for a valid calculation period (minimum 100ms required)
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Capture the second hardware snapshot
+    nvmlGpmSampleGet(device_, sample2_);
+
+    // Configure and invoke the metrics request
+    nvmlGpmMetricsGet_t metricsGet;
+    metricsGet.version = NVML_GPM_METRICS_GET_VERSION;
+    metricsGet.numMetrics = 1;
+    metricsGet.sample1 = sample1_;
+    metricsGet.sample2 = sample2_;
+
+    // Use NVML_GPM_METRIC_SM_OCCUPANCY for SM Active percentage
+    // metricsGet.metrics[0].metricId = NVML_GPM_METRIC_SM_OCCUPANCY;
+    metricsGet.metrics[0].metricId = NVML_GPM_METRIC_SM_UTIL;
+
+    auto result = nvmlGpmMetricsGet(&metricsGet);
+    if (result == NVML_SUCCESS) {
+      // Output the percentage value (0.0 to 100.0)
+      std::cout << "SM Active Utilization: " << metricsGet.metrics[0].value
+                << "%\n";
+    } else {
+      std::cerr << "Metrics calculation failed: " << nvmlErrorString(result)
+                << "\n";
+    }
+  }
+
+  // monitor loop
+  void monitor() {
+    const int SAMPLING_INTERVAL = 5; // in Second
+    const int QUERY_INTERVAL = 30;   // in Second
+    pthread_setname_np(pthread_self(), "GPU Monitor");
+
+    using namespace std::chrono;
+    // align to each 30 seconds
+    time_t next_query = system_clock::to_time_t(system_clock::now()) /
+                        QUERY_INTERVAL * QUERY_INTERVAL;
+    while (true) {
+      std::unique_lock<std::mutex> exit_lock(exit_mutex_);
+      if (!running_ ||
+          exit_signal_.wait_for(exit_lock,
+                                std::chrono::seconds(SAMPLING_INTERVAL)) !=
+              std::cv_status::timeout) {
+        return;
+      }
+      time_t now = system_clock::to_time_t(system_clock::now());
+
+      // update query value every 30 seconds
+      if (now > next_query) {
+        query_sm_active();
+      }
+
+      if (now > next_query) {
+        next_query += QUERY_INTERVAL;
+      }
+    }
+  }
+};
+
+GpuMonitor::GpuMonitor() { impl = std::make_unique<GpuMonitorImpl>(); }
+
+GpuMonitor::~GpuMonitor() {}
+
+void GpuMonitor::start() { impl->start(); }
+
+} // namespace monitor
+} // namespace gpu

@@ -3,10 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "/usr/include",
-                "/usr/include/c++/12",
-                "/usr/local/cuda-13.1/include",
-                "${workspaceFolder}/**"
+                "/usr/local/cuda-13.1/targets/x86_64-linux/include",
+                "${workspaceFolder}/CUDA/src/sm_active"
             ],
             "defines": [],
             "cStandard": "c17",
@@ -14,10 +12,8 @@
             "intelliSenseMode": "linux-gcc-x64",
             "browse": {
                 "path": [
-                    "/usr/include",
-                    "/usr/include/c++/12",
-                    "/usr/local/cuda-13.1/include",
-                    "${workspaceFolder}/**"
+                    "/usr/local/cuda-13.1/targets/x86_64-linux/include",
+                    "${workspaceFolder}/CUDA/src/sm_active"
                 ],
                 "databaseFilename": "${workspaceFolder}/.vscode/vc.db",
                 "limitSymbolsToIncludedHeaders": false
