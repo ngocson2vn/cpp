@@ -77,19 +77,24 @@ private:
     // Configure and invoke the metrics request
     nvmlGpmMetricsGet_t metricsGet;
     metricsGet.version = NVML_GPM_METRICS_GET_VERSION;
-    metricsGet.numMetrics = 1;
+    metricsGet.numMetrics = 2;
     metricsGet.sample1 = sample1_;
     metricsGet.sample2 = sample2_;
 
-    // Use NVML_GPM_METRIC_SM_OCCUPANCY for SM Active percentage
-    // metricsGet.metrics[0].metricId = NVML_GPM_METRIC_SM_OCCUPANCY;
+    // Percentage of SMs that were busy. 0.0 - 100.0
     metricsGet.metrics[0].metricId = NVML_GPM_METRIC_SM_UTIL;
+
+    // Percentage of warps that were active vs theoretical maximum. 0.0 - 100.0
+    metricsGet.metrics[1].metricId = NVML_GPM_METRIC_SM_OCCUPANCY;
 
     auto result = nvmlGpmMetricsGet(&metricsGet);
     if (result == NVML_SUCCESS) {
       // Output the percentage value (0.0 to 100.0)
-      std::cout << "SM Active Utilization: " << metricsGet.metrics[0].value
+      std::cout << "SM Utilization: " << metricsGet.metrics[0].value
                 << "%\n";
+      std::cout << "SM Active Warps: " << metricsGet.metrics[1].value
+                << "%\n";
+      std::cout << "\n";
     } else {
       std::cerr << "Metrics calculation failed: " << nvmlErrorString(result)
                 << "\n";
@@ -98,8 +103,8 @@ private:
 
   // monitor loop
   void monitor() {
-    const int SAMPLING_INTERVAL = 5; // in Second
-    const int QUERY_INTERVAL = 15;   // in Second
+    const int SAMPLING_INTERVAL = 1; // in Second
+    const int QUERY_INTERVAL = 3;   // in Second
     pthread_setname_np(pthread_self(), "GPU Monitor");
 
     using namespace std::chrono;
