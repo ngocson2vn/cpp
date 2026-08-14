@@ -1,4 +1,4 @@
-CUDA_VERSION := $(or $(CUDA_VERSION), 12.8)
+CUDA_VERSION := $(or $(CUDA_VERSION), 13.1)
 NVCC = /usr/local/cuda-$(CUDA_VERSION)/bin/nvcc
 CUDA_INCLUDE = /usr/local/cuda-$(CUDA_VERSION)/include
 

@@ -91,7 +91,6 @@ int main(int argc, char **argv) {
 
   DeviceProperties dp;
 
-  LOG(level, "%s Starting...\n\n", argv[0]);
   LOG(level, "CUDA Device Query (Runtime API) version (CUDART static linking)\n\n");
 
   int deviceCount = 0;
