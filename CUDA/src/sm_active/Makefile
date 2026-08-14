@@ -19,6 +19,11 @@ main: main.cu gpu_monitor.cc
 	$(NVCC) $(NVCC_FLAGS) $(INCLUDE_DIRS) $(LIB_DIRS) -o main main.cu gpu_monitor.cc -lcudart -lnvidia-ml
 	patchelf --add-rpath ./lib main
 
+install:
+	mkdir -p ./lib
+	cp -v /usr/local/cuda-$(CUDA_VERSION)/lib64/libcudart.so.13 ./lib/
+	cp -v /lib/x86_64-linux-gnu/libnvidia-ml.so.1 ./lib/
+
 run: main
 	./main verbose
 
