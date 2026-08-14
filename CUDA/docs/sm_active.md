@@ -6,13 +6,11 @@
 ### DCGM_FI_PROF_SM_ACTIVE Metric
 **`DCGM_FI_PROF_SM_ACTIVE`** is the Data Center GPU Manager (DCGM) equivalent of the Nsight Compute metric we just discussed.
 
-If we go back to the "Bus Analogy," `DCGM_FI_PROF_SM_ACTIVE` measures **how much of the time the bus was out on the road** (regardless of whether it was carrying 1 passenger or 64 passengers).
-
 Here is the exact definition from NVIDIA's documentation:
 
 > *The fraction of time at least one warp was active on a multiprocessor, averaged over all multiprocessors.*
 
-The value is returned as a ratio between `0.0` and `1.0` (which translates to 0% to 100% of the time). Just like the other metrics, "active" simply means a warp is resident on the SM; it doesn't mean it is actively computing (it could be stalled waiting on memory).
+The value is returned as a ratio between `0.0` and `1.0` (which translates to 0% to 100% of the time). Just like the other metrics, "**active**" simply means a warp is resident on the SM; it doesn't mean it is actively computing (it could be stalled waiting on memory).
 
 #### How to collect DCGM_FI_PROF_SM_ACTIVE
 Here is exactly how the data flows from the silicon to your C++ application:
