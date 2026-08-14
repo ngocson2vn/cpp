@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
     )
   );
 
-  LOG_INFO("Launched makeAllSMsActive\n");
+  LOG_INFO("\nLaunched makeAllSMsActive\n");
   checkCudaErrors(cudaEventRecord(event, stream));
 
   checkCudaErrors(cudaEventSynchronize(event));

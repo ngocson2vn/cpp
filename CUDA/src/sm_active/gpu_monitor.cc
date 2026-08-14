@@ -99,7 +99,7 @@ private:
   // monitor loop
   void monitor() {
     const int SAMPLING_INTERVAL = 5; // in Second
-    const int QUERY_INTERVAL = 30;   // in Second
+    const int QUERY_INTERVAL = 15;   // in Second
     pthread_setname_np(pthread_self(), "GPU Monitor");
 
     using namespace std::chrono;
