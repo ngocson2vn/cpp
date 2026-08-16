@@ -12,3 +12,27 @@ Without `volatile` qualifier, the compiler will remove `while (running)` because
 5. A compiler is allowed to assume that undefined behaviour never occurs in any valid execution of the program.
 6. Therefore the situation "the loop is entered and runs forever cannot happen in a valid program.
 7. The only remaining possibility consistent with the program being free of UB is that the loop is never entered. Hence the compiler deletes it.
+
+
+**"no observable side effects" means the updated `result` variable is never read by any code?**
+Yes, exactly.
+
+In the C++ abstract machine an **observable side effect** is something that can be seen by the outside world, for example:
+
+- writing to a `volatile` object
+- performing I/O (`std::cout`, `printf`, file writes, …)
+- atomic operations / synchronization
+
+A pure calculation that only updates ordinary local variables is **not** an observable side effect **if those variables are never read in any reachable code**.
+
+In your program the only read of `result` is this line:
+
+```cpp
+std::cout << "Result: " << result << "\n";
+```
+
+That line sits *after* the `while (running)` loop.  
+
+If the loop never terminates, the print statement is never executed, so the assignments to `result` are never observed by anyone. From the point of view of any execution that actually runs the infinite loop, those assignments have no observable effect.
+
+That is why the compiler may treat the whole loop as "an infinite loop with no observable side effects" and therefore as undefined behaviour.
