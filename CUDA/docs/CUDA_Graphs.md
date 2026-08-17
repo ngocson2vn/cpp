@@ -1,0 +1,2 @@
+# CUDA Graphs
+CUDA Graphs only solve launch latency (CPU overhead). They do not alter the execution topology. If Inductor scheduled those 20 kernels sequentially in the same CUDA stream, the CUDA Graph simply replays them sequentially. Your GPU will execute Kernel 1 (occupying 4 SMs while 184 sit idle), finish it, and then move to Kernel 2. It completely fails to solve the hardware underutilization.
