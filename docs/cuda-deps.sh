@@ -10,7 +10,10 @@ wget https://developer.download.nvidia.com/compute/cuda/13.0.1/local_installers/
 # cuda 13.1.0
 wget https://developer.download.nvidia.com/compute/cuda/13.1.0/local_installers/cuda_13.1.0_590.44.01_linux.run
 
+# For cuda12
+pip3.11 install nvidia-cudnn-cu12
 
+# For cuda13
 pip3.11 install nvidia-cudnn-cu13
 
 # User mode

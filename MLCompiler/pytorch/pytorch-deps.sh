@@ -8,9 +8,10 @@ pip install numpy filelock fsspec jinja2 networkx
 ./cuda-deps.sh
 
 # libomp
-apt install -y libomp-dev
-apt install libomp-15-dev
-ln -sf /usr/lib/llvm-14/lib/libomp.so.5 /lib/x86_64-linux-gnu/libomp.so
+sudo apt install -y libomp-dev
+sudo apt install -y libomp-15-dev
+sudo ln -sf /usr/lib/llvm-15/lib/libomp.so.5 /lib/x86_64-linux-gnu/libomp.so
+ls -l /lib/x86_64-linux-gnu/libomp.so
 
 # pytorch
 /usr/local/tao/agent/modules/bvc/bin/bvc clone aml/lagrange/pytorch --version 1.0.0.498
