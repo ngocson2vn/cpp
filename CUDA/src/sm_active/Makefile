@@ -6,6 +6,7 @@ LIB_DIRS = -L/usr/local/cuda-$(CUDA_VERSION)/lib64
 NVCC_FLAGS = -std=c++17 -g -O3
 NVCC_FLAGS += --compiler-options=-fno-inline --expt-relaxed-constexpr
 NVCC_FLAGS += --disable-warnings
+NVCC_FLAGS += --cudart static
 NVCC_FLAGS += -gencode arch=compute_75,code=sm_75
 NVCC_FLAGS += -gencode arch=compute_120a,code=sm_120a
 cuda_version := $(shell /usr/local/cuda-$(CUDA_VERSION)/bin/nvcc --version | grep cuda)
@@ -16,7 +17,7 @@ ifneq ("$(cuda12_str)", "")
 endif
 
 main: main.cu gpu_monitor.cc
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDE_DIRS) $(LIB_DIRS) -o main main.cu gpu_monitor.cc -lcudart -lnvidia-ml
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDE_DIRS) $(LIB_DIRS) -o main main.cu gpu_monitor.cc -lnvidia-ml
 	patchelf --add-rpath ./lib main
 
 install:

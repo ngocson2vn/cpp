@@ -509,6 +509,26 @@ cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r3
 cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes [%r326], [%rd3, {64, 192}], [%r325];
 ```
 
+Each individual instruction:
+
+```ptx
+cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes
+    [dst], [tensorMap, {coord0, coord1}], [mbar];
+```
+
+copies **exactly one tile** (one bounding box).
+
+### What determines the tile
+
+- The **tensor map** contains the box (tile) size that was configured when the map was created (e.g. 64×64, 128×32, etc.).
+- The coordinates `{coord0, coord1}` specify the **starting corner** of that tile inside the global tensor.
+- The instruction copies precisely the rectangular region defined by  
+  `(coord0, coord1)` + the box size stored in the tensor map.
+
+It does **not** copy the whole tensor.  
+If you need several tiles, you must issue several `cp.async.bulk.tensor` instructions (usually with different coordinates) and account for the total number of bytes in the mbarrier’s `expect_tx`.
+
+
 # shfl.sync
 ```MLIR
 shfl.sync.idx.b32 	%r341, %r448, 0, 31, -1;
