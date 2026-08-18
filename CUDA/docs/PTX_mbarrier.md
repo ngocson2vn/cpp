@@ -40,7 +40,7 @@ the hardware essentially asks:
 The phase bit **only flips** when both completion conditions of the current phase are satisfied:
 
 - Pending arrival count reaches 0, **and**
-- Transaction-byte count reaches 0
+- Pending transaction-byte count reaches 0
 
 Therefore, the moment the phase bit changes from 0 → 1, it is a reliable signal that phase 0 has fully completed. The instruction does not need to inspect the counters again; the flipped phase bit itself is the proof.
 
