@@ -28,7 +28,7 @@ sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
 Please note that both `nsys launch` and `nsys xxx` must use the same env var `TMPDIR`.
 ```Bash
 # Terminal 1
-nsys launch --session-new=master --trace=cuda,nvtx,osrt --python-sampling=true python3 /path/to/app.py
+nsys launch --session-new=inference_worker --trace=cuda,nvtx,osrt --python-sampling=true python3 /path/to/app.py
 ```
 
 ```Python
@@ -40,7 +40,7 @@ nsys launch --session-new=master --trace=cuda,nvtx,osrt --python-sampling=true p
         begin_cmd = [
             "/usr/local/cuda-13.1/bin/nsys",
             "launch",
-            "--session-new=master",
+            "--session-new=inference_worker",
             "--trace=cuda,nvtx,osrt",
             "--python-sampling=true"
         ]
@@ -60,13 +60,16 @@ Please note that both `nsys launch` and `nsys xxx` must use the same env var `TM
 echo $TMPDIR
 
 /usr/local/cuda-13.1/bin/nsys sessions list
-/usr/local/cuda-13.1/bin/nsys status --session=master
+/usr/local/cuda-13.1/bin/nsys status --session=inference_worker
 
-/usr/local/cuda-13.1/bin/nsys start --session=master --output=./manhattan_worker_profile --force-overwrite=true --sample=cpu --backtrace=dwarf
-/usr/local/cuda-13.1/bin/nsys status --session=master
+/usr/local/cuda-13.1/bin/nsys start --session=inference_worker --output=./inference_worker_profile --force-overwrite=true --sample=cpu --backtrace=dwarf
+
+/usr/local/cuda-13.1/bin/nsys start --session=inference_worker --output=./inference_worker_profile_2s --force-overwrite=true --sample=cpu --backtrace=dwarf
+
+/usr/local/cuda-13.1/bin/nsys status --session=inference_worker
 
 # Wait for a while
-/usr/local/cuda-13.1/bin/nsys stop --session=master
+/usr/local/cuda-13.1/bin/nsys stop --session=inference_worker
 ```
 <br/>
 
