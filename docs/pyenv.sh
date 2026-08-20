@@ -14,3 +14,6 @@ pyenv global 3.11.2
 python -V
 Python 3.11.2
 pip install --upgrade pip
+
+# Set default Python version
+export PYENV_VERSION=3.11.2

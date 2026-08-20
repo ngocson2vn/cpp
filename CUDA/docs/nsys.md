@@ -85,13 +85,6 @@ Step 3: Navigate to the bottom pane and select "Bottom-Up View"
 <img src="./images/show_kernels.png" width="80%" />
 
 
-# Common Issues
-## Unable to collect CPU kernel IP/backtrace samples. perf event paranoid level is 2.
-**Solution:** Change the paranoid level to 1 to enable CPU kernel sample collection:
-```Bash
-sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
-```
-
 # Query nsys report using sqlite3
 ### Step 1: Export the Profile to SQLite
 ```bash
@@ -103,3 +96,49 @@ nsys export --type sqlite worker_profile.nsys-rep
 This method uses the standard library to execute the query and iterates through the results to print them row by row.
 
 Check out [../scripts/analyze_nsys_report.py](../scripts/analyze_nsys_report.py)
+
+
+
+# Common Issues
+## Unable to collect CPU kernel IP/backtrace samples. perf event paranoid level is 2.
+**Solution:** Change the paranoid level to 1 to enable CPU kernel sample collection:
+```Bash
+sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
+```
+
+## Failed to probe the process
+```cpp
+terminate called after throwing an instance of 'boost::wrapexcept<QuadDCommon::LogicException>'
+  what():  LogicException
+Failed to probe the process (sync). Timeout: 2 sec
+```
+
+**Quick Check**
+
+Double-check the environment variable `LD_PRELOAD`, ensure that it is empty before starting `nsys`.
+
+If it includes `libjemalloc.so`, then `nsys` will throw the exception.
+
+
+**Debug Steps:**
+
+**Step 1: Configure `nsys` log**
+
+```bash
+# Find the template (adjust path if your install is different)
+find /usr/local/cuda-13.1 -name nvlog.config.template
+
+# Copy and edit it
+cp /usr/local/cuda-13.1/.../nvlog.config.template /tmp/nvlog.config
+# Inside the file change the log target to something like:
+# $ /tmp/nsys-agent.log
+
+# export NVLOG_CONFIG_FILE
+export NVLOG_CONFIG_FILE=/tmp/nvlog.config
+```
+
+
+**Step 2: Check `nsys` log**
+
+Check /tmp/nsys-agent.log
+

@@ -2049,5 +2049,5 @@ def benchmark_compiled_module():
 
 
 if __name__ == "__main__":
-    # benchmark_compiled_module()
+    benchmark_compiled_module()
     print("OK")
