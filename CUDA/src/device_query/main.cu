@@ -37,9 +37,9 @@
 #include <memory>
 #include <string>
 
-#define LOG(level, format, ...)              \
-  if (level > 0) {                           \
-    fprintf(stdout, format, ##__VA_ARGS__);    \
+#define LOG(level, format, ...)               \
+  if (level == 0) {                           \
+    fprintf(stdout, format, ##__VA_ARGS__);   \
   }
 
 int *pArgc = NULL;
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
   int level = 0;
   if (argc > 1) {
     std::string mode(pArgv[1]);
-    if (mode == "verbose") {
+    if (mode == "json") {
       level = 1;
     }
   }
@@ -94,11 +94,11 @@ int main(int argc, char **argv) {
   LOG(level, "CUDA Device Query (Runtime API) version (CUDART static linking)\n\n");
 
   int deviceCount = 0;
-  cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+  cudaError_t error = cudaGetDeviceCount(&deviceCount);
 
-  if (error_id != cudaSuccess) {
+  if (error != cudaSuccess) {
     LOG(level, "cudaGetDeviceCount returned %d\n-> %s\n",
-           static_cast<int>(error_id), cudaGetErrorString(error_id));
+           static_cast<int>(error), cudaGetErrorString(error));
     LOG(level, "Result = FAIL\n");
     exit(EXIT_FAILURE);
   }
@@ -111,9 +111,9 @@ int main(int argc, char **argv) {
   }
 
   int dev, driverVersion = 0, runtimeVersion = 0;
-  cudaSetDevice(dev);
+  checkCudaErrors(cudaSetDevice(dev));
   cudaDeviceProp deviceProp;
-  cudaGetDeviceProperties(&deviceProp, dev);
+  checkCudaErrors(cudaGetDeviceProperties(&deviceProp, dev));
 
   LOG(level, "\nDevice %d: \"%s\"\n", dev, deviceProp.name);
   dp.name = deviceProp.name;
@@ -350,7 +350,7 @@ int main(int argc, char **argv) {
 
   LOG(level, "Result = PASS\n");
 
-  if (level < 1) {
+  if (level == 1) {
     std::cout << createJson(dp);
   }
 
