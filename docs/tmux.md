@@ -20,3 +20,8 @@ find /tmp/tmux2
 # New session
 tmux
 ```
+
+# Enable mouse
+```bash
+echo 'set -g mouse on' >> ~/.tmux.conf
+```
