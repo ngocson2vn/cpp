@@ -8,7 +8,9 @@
 
 Here is the exact definition from NVIDIA's documentation:
 
-> *The fraction of time at least one warp was active on a multiprocessor, averaged over all multiprocessors.*
+https://run-ai-docs.nvidia.com/saas/platform-management/monitor-performance/gpu-profiling-metrics
+
+> *DCGM_FI_PROF_SM_ACTIVE,          gauge, The ratio of cycles an SM has at least 1 warp assigned (in %).*
 
 The value is returned as a ratio between `0.0` and `1.0` (which translates to 0% to 100% of the time). Just like the other metrics, "**active**" simply means a warp is resident on the SM; it doesn't mean it is actively computing (it could be stalled waiting on memory).
 
