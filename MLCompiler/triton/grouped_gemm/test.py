@@ -103,7 +103,8 @@ def triton_tem_fused_4x4(
         out_ptr1 = C3
 
     #================================================================================
-    # original L2 swizzle, applied per-problem
+    # Original L2 swizzle, applied per-problem
+    # Read more GEMM.md
     #================================================================================
     swizzle_size = GROUP_M * grid_n
     swizzle_id = pid_in_gemm // swizzle_size
@@ -143,8 +144,6 @@ def triton_tem_fused_4x4(
         b = tl.load(B + (idx_n + 64 * idx_m))
         acc += tl.dot(a, b, allow_tf32=ALLOW_TF32)
 
-    # rm = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
-    # rn = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
     idx_m = rm[:, None]
     idx_n = rn[None, :]
     mask = (idx_m < M) & (idx_n < N)
