@@ -1,5 +1,5 @@
 .DS_Store
-.vscode/vc.db*
+.vscode/vc.*
 *.dSYM
 *.o
 *.so

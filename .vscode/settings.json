@@ -130,9 +130,7 @@
     "python.analysis.extraPaths": [
         "${workspaceFolder}/MLCompiler/pytorch",
         "/opt/tiger/byted_tf_opt",
-        "/data00/home/son.nguyen/.pyenv/versions/3.7.3/lib/python3.7/site-packages",
-        "/data00/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages",
-        "/data03/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages"
+        "/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages"
     ],
     "git.ignoreLimitWarning": true
 }
