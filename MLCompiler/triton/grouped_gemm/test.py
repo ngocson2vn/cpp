@@ -132,8 +132,8 @@ def triton_tem_fused_4x4(
     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=ACC_TYPE)
 
     for k_idx in range(0, tl.cdiv(K, BLOCK_K)):
-        a_k_idx_vals = offs_k[None, :] + (k_idx * BLOCK_K)
-        b_k_idx_vals = offs_k[:, None] + (k_idx * BLOCK_K)
+        a_k_idx_vals = offs_k[None, :] + (k_idx * BLOCK_K) # shape = (1, BLOCK_K)
+        b_k_idx_vals = offs_k[:, None] + (k_idx * BLOCK_K) # shape = (BLOCK_K, 1)
 
         idx_m = offs_a_m[:, None]
         idx_n = a_k_idx_vals
@@ -217,7 +217,7 @@ from util import diff
 
 
 def main():
-    M = 128
+    M = 35
     N = 64
     K = 64
     DEVICE = torch.device("cuda", 0)
