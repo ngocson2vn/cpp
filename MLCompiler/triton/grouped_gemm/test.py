@@ -119,6 +119,12 @@ def triton_tem_fused_4x4(
         (stride_am == 1 and stride_ak == M) or (stride_am == K and stride_ak == 1)
     ) and M >= BLOCK_M:
         offs_a_m = tl.max_contiguous(tl.multiple_of(rm % M, BLOCK_M), BLOCK_M)
+        # NOTE: There is a CUDA illegal memory access risk if M % BLOCK_M != 0
+        # However, this risk is usually eliminated by PyTorch's CUDA Caching Allocator.
+        # That is that allocator always allocates a chunk of GPU memory that is larger than
+        # the actual size of the matrix A. Therefore, even though a load instruction reads
+        # memory addresses beyond the matrix A's address boundary. Those addresses are likely
+        # still in the allocated chunk.
     else:
         offs_a_m = rm % M
     if (
@@ -135,13 +141,67 @@ def triton_tem_fused_4x4(
         a_k_idx_vals = offs_k[None, :] + (k_idx * BLOCK_K) # shape = (1, BLOCK_K)
         b_k_idx_vals = offs_k[:, None] + (k_idx * BLOCK_K) # shape = (BLOCK_K, 1)
 
+        # Original shape of `offs_a_m` is (BLOCK_M)
+        # The resulting tensor will have a shape of (BLOCK_M, 1)
         idx_m = offs_a_m[:, None]
-        idx_n = a_k_idx_vals
-        a = tl.load(A + (idx_n + 64 * idx_m))
 
-        idx_m = b_k_idx_vals
+        idx_k = a_k_idx_vals # shape = (1, BLOCK_K)
+
+        #                  K=64
+        #        |------------------------|
+        #        |                        |
+        #        |         32x64          |
+        #        |                        |
+        #        |------------------------|
+        #        |                        |
+        #        |         32x64          |
+        #        |                        |
+        #  M=128 |------------------------|
+        #        |                        |
+        #        |         32x64          |
+        #        |                        |
+        #        |------------------------|
+        #        |                        |
+        #        |         32x64          |
+        #        |                        |
+        #        |------------------------|
+        # 
+        #         |----|  
+        #         | 0  |  
+        #         |----|  
+        #         | 1  |  
+        #         |----|  
+        # idx_m = | 2  | 
+        #         |----|  
+        #          ....   
+        #         |----|  
+        #         | 31 |  
+        #         |----|  
+        #                                 
+        #==========================================================
+        # For pid_m = 0, k_idx = 0:
+        #==========================================================
+        #                 |----|----|----|       |----|                  
+        # =>      idx_k = | 0  | 1  | 2  | ..... | 63 |                  
+        #                 |----|----|----|       |----|
+        #
+        #                 |----|
+        #                 | 0  |
+        #                 |----|
+        #                 | 64 |
+        #                 |----|
+        # => 64 * idx_m = |128 |
+        #                 |----|
+        #                  .... 
+        #                 |----|
+        #                 |1984|
+        #                 |----|
+        #
+        a = tl.load(A + (idx_k + 64 * idx_m))
+
+        idx_k = b_k_idx_vals
         idx_n = offs_b_n[None, :]
-        b = tl.load(B + (idx_n + 64 * idx_m))
+        b = tl.load(B + (idx_n + 64 * idx_k))
         acc += tl.dot(a, b, allow_tf32=ALLOW_TF32)
 
     idx_m = rm[:, None]
