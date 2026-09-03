@@ -1,5 +1,5 @@
 # GPU Architecture
-<img src="./gpu_architecture_details.png" width="100%" />
+<img src="./gpu_architecture_details.png" width="60%" />
 <br/><br/>
 
 ## Programming Model

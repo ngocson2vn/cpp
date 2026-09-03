@@ -49,14 +49,32 @@ def triton_gemm(
     grid_n = (N + BLOCK_N - 1) // BLOCK_N
 
     #================================================================================
+    # Naive approach for computing pid_m and pid_n
+    # Read more GEMM.md
+    #                        pid_n
+    #                                        grid_n
+    #            ┌──────┬──────┬──────┬──────┐
+    #            │  0,0 │  0,1 │  0,2 │  0,3 │
+    #            ├──────┼──────┼──────┼──────┤
+    #            │  1,0 │  1,1 │  1,2 │  1,3 │
+    #   pid_m    ├──────┼──────┼──────┼──────┤
+    #            │  2,0 │  2,1 │  2,2 │  2,3 │
+    #            ├──────┼──────┼──────┼──────┤
+    #            │  3,0 │  3,1 │  3,2 │  3,3 │
+    #     grid_m └──────┴──────┴──────┴──────┘
+    #================================================================================
+    pid_m = pid // grid_n
+    pid_n = pid % grid_n
+
+    #================================================================================
     # Original L2 swizzle, applied per-problem
     # Read more GEMM.md
     #================================================================================
-    swizzle_size = GROUP_M * grid_n
-    swizzle_id = pid // swizzle_size
-    swizzle_height = min(grid_m - swizzle_id * GROUP_M, GROUP_M)
-    pid_m = swizzle_id * GROUP_M + (pid % swizzle_height)
-    pid_n = (pid % swizzle_size) // swizzle_height
+    # swizzle_size = GROUP_M * grid_n
+    # swizzle_id = pid // swizzle_size
+    # swizzle_height = min(grid_m - swizzle_id * GROUP_M, GROUP_M)
+    # pid_m = swizzle_id * GROUP_M + (pid % swizzle_height)
+    # pid_n = (pid % swizzle_size) // swizzle_height
     #================================================================================
 
     rm = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
@@ -70,16 +88,17 @@ def triton_gemm(
     offs_b_n = tl.max_contiguous(rn, BLOCK_N)
     idx_n = offs_b_n[None, :]
 
-    offs_k = tl.arange(0, BLOCK_K)
     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=ACC_TYPE)
 
-    # Loop through K blocks
-    for k_idx in range(0, tl.cdiv(K, BLOCK_K)):
-        # Load A block
+    # Loop through k_tiles
+    k_tiles = tl.cdiv(K, BLOCK_K)
+    offs_k = tl.arange(0, BLOCK_K)
+    for k_idx in range(0, k_tiles):
+        # Load A tile
         idx_k = offs_k[None, :] + (k_idx * BLOCK_K) # shape = (1, BLOCK_K)
         a = tl.load(A + (idx_k + K * idx_m))
 
-        # Load B block
+        # Load B tile
         idx_k = offs_k[:, None] + (k_idx * BLOCK_K) # shape = (BLOCK_K, 1)
         b = tl.load(B + (idx_n + N * idx_k))
 
@@ -111,16 +130,16 @@ def main():
     A = torch.rand(M, K, dtype=torch.float16, device=DEVICE) - 0.5
     B = torch.rand(K, N, dtype=torch.float16, device=DEVICE) - 0.5
 
-    print(f"A.shape: {list(A.shape)}")
-    print(f"A.stride: {list(A.stride())}")
-    print(f"A.dtype: {A.dtype}")
-    print(f"A.tensor: {A}")
+    print("{0:>10s}{1}".format("A.shape: ", list(A.shape)))
+    print("{0:>10s}{1}".format("A.stride: ", list(A.stride())))
+    print("{0:>10s}{1}".format("A.dtype: ", A.dtype))
+    print("{0:>10s}{1}".format("A.tensor: ", A))
     print()
 
-    print(f"B.shape: {list(B.shape)}")
-    print(f"B.stride: {list(B.stride())}")
-    print(f"B.dtype: {B.dtype}")
-    print(f"B.tensor: {B}")
+    print("{0:>10s}{1}".format("B.shape: ", list(B.shape)))
+    print("{0:>10s}{1}".format("B.stride: ", list(B.stride())))
+    print("{0:>10s}{1}".format("B.dtype: ", B.dtype))
+    print("{0:>10s}{1}".format("B.tensor: ", B))
 
     C = torch.zeros([M, N], dtype=torch.float16, device=DEVICE)
     print()
@@ -137,10 +156,10 @@ def main():
     )
 
     torch.cuda.synchronize()
-    print(f"C.shape: {list(C.shape)}")
-    print(f"C.stride: {list(C.stride())}")
-    print(f"C.dtype: {C.dtype}")
-    print(f"C.tensor: {C}")
+    print("{0:>10s}{1}".format("C.shape: ", list(C.shape)))
+    print("{0:>10s}{1}".format("C.stride: ", list(C.stride())))
+    print("{0:>10s}{1}".format("C.dtype: ", C.dtype))
+    print("{0:>10s}{1}".format("C.tensor: ", C))
     print()
 
     torch_C = torch.matmul(A.float(), B.float())
