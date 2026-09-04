@@ -2,17 +2,16 @@
 
 class Timer {
 public:
-  Timer() : tp_(std::chrono::system_clock::now()) {}
+  Timer()
+      : t0(std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::system_clock::now().time_since_epoch())) {}
 
   uint64_t elapsed_time() {
-    auto end_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    auto t1 = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::system_clock::now().time_since_epoch());
-    auto start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        tp_.time_since_epoch());
-    auto d = end_ns - start_ns;
-    return d.count();
+    return (t1 - t0).count();
   }
 
 private:
-  std::chrono::system_clock::time_point tp_;
+  std::chrono::nanoseconds t0;
 };

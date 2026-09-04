@@ -13,17 +13,26 @@ endif
 
 NVCC_FLAGS := $(NVCC_GENCODE_FLAGS)
 
-v1: main.cu
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -DKERNEL_VERSION=1 -o main1 main.cu
+main: main1 main2
+ptx: main1.ptx main2.ptx
 
-v2: main.cu
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -DKERNEL_VERSION=2 -o main2 main.cu
+main1: main1.cu
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -o $@ main1.cu
 
-ptx1: main.cu
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -DKERNEL_VERSION=1 -ptx -o main1.ptx main.cu
+main2: main2.cu
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -o $@ main2.cu
 
-ptx2: main.cu
-	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -DKERNEL_VERSION=2 -ptx -o main2.ptx main.cu
+main1.ptx: main1.cu
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -ptx -o $@ main1.cu
+
+main2.ptx: main2.cu
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -ptx -o $@ main2.cu
+
+run: main
+	@echo
+	./main1
+	@echo
+	./main2
 
 clean:
-	rm -fv main main1 main2 *.o *.ptx
+	rm -fv main main1 main2 main3 *.o *.ptx

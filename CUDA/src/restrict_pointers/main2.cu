@@ -5,6 +5,7 @@
 
 #include "timer.h"
 
+#define KERNEL_VERSION 3
 #define TOSTR(x) #x
 #define STRINGIFY(x) TOSTR(x)
 
@@ -20,20 +21,10 @@
     }                                                                          \
   } while (0)
 
-#if (KERNEL_VERSION == 1)
-__global__ void add_vectors(const float *a, const float *b, float *c,
-                            int totalElems)
 
-#elif (KERNEL_VERSION == 2)
 __global__ void add_vectors(const float *__restrict__ a,
                             const float *__restrict__ b, float *__restrict__ c,
-                            int totalElems)
-
-#else
-static_assert(false,
-              "KERNEL_VERSION=" STRINGIFY(KERNEL_VERSION) " is unsupported!");
-#endif
-{
+                            int totalElems, int maxRound) {
   auto numThreads = blockDim.x;
   auto numElems = (totalElems + numThreads - 1) / numThreads;
   auto tid = threadIdx.x;
@@ -41,22 +32,28 @@ static_assert(false,
   // numElems = 4
   //  tid=0  |  tid=1  |  tid=2
   // 0 1 2 3 | 4 5 6 7 | 8 9 10 11
-  for (int idx = tid * numElems; idx < min((tid + 1) * numElems, totalElems);
-       idx++) {
-    c[idx] = a[idx] + b[idx];
+
+  // Ensure that `maxIdx` is not greater than `totalElems`
+  auto maxIdx = min((tid + 1) * numElems, totalElems);
+
+  for (int i = 0; i < maxRound; i++) {
+    for (int idx = tid * numElems; idx < maxIdx; idx++) {
+      c[idx] = a[idx] + b[idx];
+    }
   }
 }
 
 int main(int argc, char **argv) {
   using DataType = float;
   constexpr std::size_t kTotalElems = 128;
+  constexpr std::size_t kMaxRound = 1000000;
   constexpr std::size_t kNumBytes = kTotalElems * sizeof(DataType);
 
   printf("KERNEL_VERSION = %d\n\n", KERNEL_VERSION);
 
   auto a = std::vector<DataType>(kTotalElems, 0);
   auto b = std::vector<DataType>(kTotalElems, 0);
-  auto c = std::vector<DataType>(kTotalElems, 0);
+  auto gpu_res = std::vector<DataType>(kTotalElems, 0);
 
   for (int i = 0; i < kTotalElems; i++) {
     a[i] = DataType(i);
@@ -81,33 +78,30 @@ int main(int argc, char **argv) {
 
   Timer timer;
   add_vectors<<<gridSize, blockSize>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr,
-                                       kTotalElems);
+                                       kTotalElems, kMaxRound);
   CHECK_CUDA_ERROR(cudaGetLastError());
   CHECK_CUDA_ERROR(cudaDeviceSynchronize());
   printf("Kernel time: %lu ns\n\n", timer.elapsed_time());
 
   CHECK_CUDA_ERROR(
-      cudaMemcpy(c.data(), dev_c_ptr, kNumBytes, cudaMemcpyDeviceToHost));
+      cudaMemcpy(gpu_res.data(), dev_c_ptr, kNumBytes, cudaMemcpyDeviceToHost));
 
   cudaFree(dev_a_ptr);
   cudaFree(dev_b_ptr);
   cudaFree(dev_c_ptr);
 
-  printf("a: ");
+  auto cpu_res = std::vector<DataType>(kTotalElems, 0);
   for (int i = 0; i < kTotalElems; i++) {
-    printf("%7.1f", a[i]);
+    cpu_res[i] = a[i] + b[i];
   }
-  printf("\n\n");
 
-  printf("b: ");
+  bool ok = true;
   for (int i = 0; i < kTotalElems; i++) {
-    printf("%7.1f", b[i]);
+    if (gpu_res[i] != cpu_res[i]) {
+      ok = false;
+      break;
+    }
   }
-  printf("\n\n");
 
-  printf("c: ");
-  for (int i = 0; i < kTotalElems; i++) {
-    printf("%7.1f", c[i]);
-  }
-  printf("\n");
+  printf("%s\n", (ok ? "PASSED" : "FAILED"));
 }
