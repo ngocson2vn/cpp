@@ -117,7 +117,7 @@
         "*.ttir": "mlir",
         "*.ttgir": "mlir",
         "*.llir": "mlir",
-        "*.ptx": "mlir",
+        "*.ptx": "mlir"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "C_Cpp.default.compilerPath": "/usr/bin/g++",

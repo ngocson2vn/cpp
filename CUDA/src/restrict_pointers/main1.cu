@@ -21,9 +21,11 @@
     }                                                                          \
   } while (0)
 
+extern "C" {
 
-__global__ void add_vectors(const float *a, const float *b, float *c,
-                            int totalElems, int maxRound) {
+// c = (a + b) * a
+__global__ void add_mul_vectors(const float *a, const float *b, float *c,
+                                int totalElems) {
   auto numThreads = blockDim.x;
   auto numElems = (totalElems + numThreads - 1) / numThreads;
   auto tid = threadIdx.x;
@@ -34,27 +36,34 @@ __global__ void add_vectors(const float *a, const float *b, float *c,
 
   // Ensure that `maxIdx` is not greater than `totalElems`
   auto maxIdx = min((tid + 1) * numElems, totalElems);
-
-  for (int i = 0; i < maxRound; i++) {
-    for (int idx = tid * numElems; idx < maxIdx; idx++) {
-      c[idx] = a[idx] + b[idx];
-    }
+  for (int idx = tid * numElems; idx < maxIdx; idx++) {
+    c[idx] = a[idx] + b[idx];
   }
+
+  for (int idx = tid * numElems; idx < maxIdx; idx++) {
+    c[idx] = c[idx] * a[idx];
+  }
+}
+
 }
 
 int main(int argc, char **argv) {
   using DataType = float;
-  constexpr std::size_t kTotalElems = 128;
-  constexpr std::size_t kMaxRound = 1000000;
-  constexpr std::size_t kNumBytes = kTotalElems * sizeof(DataType);
 
-  printf("KERNEL_VERSION = %d\n\n", KERNEL_VERSION);
+  std::size_t totalElems = 1024000;
+  if (argc > 1) {
+    totalElems = std::atoi(argv[1]);
+  }
 
-  auto a = std::vector<DataType>(kTotalElems, 0);
-  auto b = std::vector<DataType>(kTotalElems, 0);
-  auto gpu_res = std::vector<DataType>(kTotalElems, 0);
+  const std::size_t kNumBytes = totalElems * sizeof(DataType);
 
-  for (int i = 0; i < kTotalElems; i++) {
+  printf("KERNEL_VERSION = %d\n", KERNEL_VERSION);
+
+  auto a = std::vector<DataType>(totalElems, 0);
+  auto b = std::vector<DataType>(totalElems, 0);
+  auto gpu_res = std::vector<DataType>(totalElems, 0);
+
+  for (int i = 0; i < totalElems; i++) {
     a[i] = DataType(i);
     b[i] = DataType(i);
   }
@@ -76,11 +85,11 @@ int main(int argc, char **argv) {
   dim3 blockSize(32, 1, 1);
 
   Timer timer;
-  add_vectors<<<gridSize, blockSize>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr,
-                                       kTotalElems, kMaxRound);
+  add_mul_vectors<<<gridSize, blockSize>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr,
+                                           totalElems);
   CHECK_CUDA_ERROR(cudaGetLastError());
   CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-  printf("Kernel time: %lu ns\n\n", timer.elapsed_time());
+  printf("Kernel time: %lu ns\n", timer.elapsed_time());
 
   CHECK_CUDA_ERROR(
       cudaMemcpy(gpu_res.data(), dev_c_ptr, kNumBytes, cudaMemcpyDeviceToHost));
@@ -89,13 +98,13 @@ int main(int argc, char **argv) {
   cudaFree(dev_b_ptr);
   cudaFree(dev_c_ptr);
 
-  auto cpu_res = std::vector<DataType>(kTotalElems, 0);
-  for (int i = 0; i < kTotalElems; i++) {
-    cpu_res[i] = a[i] + b[i];
+  auto cpu_res = std::vector<DataType>(totalElems, 0);
+  for (int i = 0; i < totalElems; i++) {
+    cpu_res[i] = a[i] * (a[i] + b[i]);
   }
 
   bool ok = true;
-  for (int i = 0; i < kTotalElems; i++) {
+  for (int i = 0; i < totalElems; i++) {
     if (gpu_res[i] != cpu_res[i]) {
       ok = false;
       break;

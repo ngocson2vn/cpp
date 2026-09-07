@@ -6,7 +6,7 @@
 
 #include "timer.h"
 
-#define KERNEL_VERSION 2
+#define KERNEL_VERSION 1
 #define TOSTR(x) #x
 #define STRINGIFY(x) TOSTR(x)
 
@@ -24,9 +24,9 @@
 
 extern "C" {
 
-__global__ void add_mul_vectors(const float *__restrict__ a,
-                                const float *__restrict__ b,
-                                float *__restrict__ c, int totalElems) {
+__global__ void add_vectors(const float *__restrict__ a,
+                            const float *__restrict__ b, float *__restrict__ c,
+                            int totalElems) {
   auto numThreads = blockDim.x;
   auto numElems = (totalElems + numThreads - 1) / numThreads;
   auto tid = threadIdx.x;
@@ -37,14 +37,13 @@ __global__ void add_mul_vectors(const float *__restrict__ a,
 
   // Ensure that `maxIdx` is not greater than `totalElems`
   auto maxIdx = min((tid + 1) * numElems, totalElems);
+
+  #pragma unroll 1
   for (int idx = tid * numElems; idx < maxIdx; idx++) {
     c[idx] = a[idx] + b[idx];
   }
-
-  for (int idx = tid * numElems; idx < maxIdx; idx++) {
-    c[idx] = c[idx] * a[idx];
-  }
 }
+
 }
 
 int main(int argc, char **argv) {
@@ -85,11 +84,11 @@ int main(int argc, char **argv) {
   dim3 blockSize(32, 1, 1);
 
   Timer timer;
-  add_mul_vectors<<<gridSize, blockSize>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr,
-                                           totalElems);
+  add_vectors<<<gridSize, blockSize>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr,
+                                       totalElems);
   CHECK_CUDA_ERROR(cudaGetLastError());
   CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-  printf("Kernel time: %lu ns\n", timer.elapsed_time());
+  printf("Kernel time: %lu ms\n", timer.elapsed_time_ms());
 
   CHECK_CUDA_ERROR(
       cudaMemcpy(gpu_res.data(), dev_c_ptr, kNumBytes, cudaMemcpyDeviceToHost));
