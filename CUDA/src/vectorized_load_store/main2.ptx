@@ -20,52 +20,80 @@
 	.param .u32 add_vectors_param_4
 )
 {
-	.reg .pred 	%p<3>;
-	.reg .b32 	%r<30>;
-	.reg .b64 	%rd<8>;
+	.reg .pred 	%p<5>;
+	.reg .b32 	%r<46>;
+	.reg .b64 	%rd<15>;
 
-	ld.param.b64 	%rd1, [add_vectors_param_0];
-	ld.param.b64 	%rd2, [add_vectors_param_1];
-	ld.param.b64 	%rd3, [add_vectors_param_2];
-	ld.param.b32 	%r5, [add_vectors_param_3];
-	ld.param.b32 	%r6, [add_vectors_param_4];
-	mov.u32 	%r7, %ctaid.x;
-	mov.u32 	%r8, %ntid.x;
-	add.s32 	%r9, %r8, %r5;
-	add.s32 	%r10, %r9, -1;
-	div.u32 	%r11, %r10, %r8;
-	mov.u32 	%r12, %tid.x;
-	mul.lo.s32 	%r13, %r5, %r7;
-	add.s32 	%r14, %r13, %r5;
-	mad.lo.s32 	%r29, %r11, %r12, %r13;
-	add.s32 	%r15, %r29, %r11;
-	min.u32 	%r16, %r15, %r14;
-	min.u32 	%r2, %r16, %r6;
-	setp.ge.u32 	%p1, %r29, %r2;
-	@%p1 bra 	$L__BB0_2;
+	ld.param.b64 	%rd4, [add_vectors_param_0];
+	ld.param.b64 	%rd5, [add_vectors_param_1];
+	ld.param.b64 	%rd6, [add_vectors_param_2];
+	ld.param.b32 	%r14, [add_vectors_param_3];
+	ld.param.b32 	%r15, [add_vectors_param_4];
+	mov.u32 	%r16, %ctaid.x;
+	mov.u32 	%r17, %ntid.x;
+	add.s32 	%r18, %r17, %r14;
+	add.s32 	%r19, %r18, -1;
+	div.u32 	%r20, %r19, %r17;
+	mov.u32 	%r21, %tid.x;
+	mul.lo.s32 	%r22, %r14, %r16;
+	add.s32 	%r23, %r22, %r14;
+	mad.lo.s32 	%r45, %r20, %r21, %r22;
+	add.s32 	%r24, %r45, %r20;
+	min.u32 	%r25, %r24, %r23;
+	min.u32 	%r2, %r25, %r15;
+	add.s32 	%r43, %r45, 4;
+	setp.ge.u32 	%p1, %r43, %r2;
+	mov.b32 	%r42, %r45;
+	@%p1 bra 	$L__BB0_1;
+	bra.uni 	$L__BB0_5;
 $L__BB0_1:
+	setp.ge.u32 	%p3, %r45, %r2;
+	@%p3 bra 	$L__BB0_4;
+	sub.s32 	%r44, %r45, %r2;
+	cvta.to.global.u64 	%rd1, %rd4;
+	cvta.to.global.u64 	%rd2, %rd5;
+	cvta.to.global.u64 	%rd3, %rd6;
+$L__BB0_3:
 	.pragma "nounroll";
-	mul.wide.s32 	%rd7, %r29, 4;
-	add.s64 	%rd4, %rd1, %rd7;
-	// begin inline asm
-	ld.global.v4.f32 {%r17, %r18, %r19, %r20}, [%rd4];
-	// end inline asm
-	add.s64 	%rd5, %rd2, %rd7;
-	// begin inline asm
-	ld.global.v4.f32 {%r21, %r22, %r23, %r24}, [%rd5];
-	// end inline asm
-	add.s64 	%rd6, %rd3, %rd7;
-	add.f32 	%r25, %r17, %r21;
-	add.f32 	%r26, %r18, %r22;
-	add.f32 	%r27, %r19, %r23;
-	add.f32 	%r28, %r20, %r24;
-	// begin inline asm
-	st.global.v4.f32 [%rd6], {%r25, %r26, %r27, %r28};
-	// end inline asm
-	add.s32 	%r29, %r29, 4;
-	setp.lt.u32 	%p2, %r29, %r2;
-	@%p2 bra 	$L__BB0_1;
-$L__BB0_2:
+	mul.wide.s32 	%rd11, %r45, 4;
+	add.s64 	%rd12, %rd3, %rd11;
+	add.s64 	%rd13, %rd2, %rd11;
+	add.s64 	%rd14, %rd1, %rd11;
+	ld.global.b32 	%r38, [%rd14];
+	ld.global.b32 	%r39, [%rd13];
+	add.f32 	%r40, %r38, %r39;
+	st.global.b32 	[%rd12], %r40;
+	add.s32 	%r45, %r45, 1;
+	add.s32 	%r44, %r44, 1;
+	setp.ne.s32 	%p4, %r44, 0;
+	@%p4 bra 	$L__BB0_3;
+$L__BB0_4:
 	ret;
+$L__BB0_5:
+	.pragma "nounroll";
+	mul.wide.s32 	%rd10, %r42, 4;
+	add.s64 	%rd7, %rd4, %rd10;
+	// begin inline asm
+	ld.global.nc.v4.f32 {%r26, %r27, %r28, %r29}, [%rd7];
+	// end inline asm
+	add.s64 	%rd8, %rd5, %rd10;
+	// begin inline asm
+	ld.global.nc.v4.f32 {%r30, %r31, %r32, %r33}, [%rd8];
+	// end inline asm
+	add.s64 	%rd9, %rd6, %rd10;
+	add.f32 	%r34, %r26, %r30;
+	add.f32 	%r35, %r27, %r31;
+	add.f32 	%r36, %r28, %r32;
+	add.f32 	%r37, %r29, %r33;
+	// begin inline asm
+	st.global.v4.f32 [%rd9], {%r34, %r35, %r36, %r37};
+	// end inline asm
+	add.s32 	%r8, %r43, 4;
+	add.s32 	%r42, %r42, 4;
+	setp.lt.u32 	%p2, %r8, %r2;
+	mov.b32 	%r45, %r43;
+	mov.b32 	%r43, %r8;
+	@%p2 bra 	$L__BB0_5;
+	bra.uni 	$L__BB0_1;
 
 }

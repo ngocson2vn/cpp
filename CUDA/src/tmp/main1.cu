@@ -7,7 +7,7 @@
 
 #include "timer.h"
 
-#define KERNEL_VERSION 2
+#define KERNEL_VERSION 1
 #define TOSTR(x) #x
 #define STRINGIFY(x) TOSTR(x)
 
@@ -25,22 +25,6 @@
   } while (0)
 
 extern "C" {
-
-__device__ void ld_v4_f32(float& v0, float& v1, float& v2, float& v3, const float* ptr) {
-  asm volatile(
-    "ld.global.nc.v4.f32 {%0, %1, %2, %3}, [%4];"
-    : "=f"(v0), "=f"(v1), "=f"(v2), "=f"(v3)
-    : "l"(ptr)
-  );
-}
-
-__device__ void st_v4_f32(float* ptr, float v0, float v1, float v2, float v3) {
-  asm volatile(
-    "st.global.v4.f32 [%0], {%1, %2, %3, %4};"
-    :
-    : "l"(ptr), "f"(v0), "f"(v1), "f"(v2), "f"(v3)
-  );
-}
 
 __global__ void add_vectors(const float *__restrict__ a,
                             const float *__restrict__ b, float *__restrict__ c,
@@ -79,19 +63,8 @@ __global__ void add_vectors(const float *__restrict__ a,
   // Ensure that `upperBound` is not greater than `totalElems`
   upperBound = min(upperBound, totalElems);
 
-  int idx = lowerBound;
-  float a0, a1, a2, a3;
-  float b0, b1, b2, b3;
-
-  #pragma unroll 1
-  for (; idx + 4 < upperBound; idx += 4) {
-    ld_v4_f32(a0, a1, a2, a3, &a[idx]);
-    ld_v4_f32(b0, b1, b2, b3, &b[idx]);
-    st_v4_f32(&c[idx], a0 + b0, a1 + b1, a2 + b2, a3 + b3);
-  }
-
-  #pragma unroll 1
-  for (; idx < upperBound; idx++) {
+  #pragma unroll 4
+  for (int idx = lowerBound; idx < upperBound; idx++) {
     c[idx] = a[idx] + b[idx];
   }
 }

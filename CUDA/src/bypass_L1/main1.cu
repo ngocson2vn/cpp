@@ -7,7 +7,7 @@
 
 #include "timer.h"
 
-#define KERNEL_VERSION 2
+#define KERNEL_VERSION 1
 #define TOSTR(x) #x
 #define STRINGIFY(x) TOSTR(x)
 
@@ -26,26 +26,29 @@
 
 extern "C" {
 
-__device__ void ld_v4_f32(float& v0, float& v1, float& v2, float& v3, const float* ptr) {
+__device__ void set_done(uint32_t tid, bool* ptr) {
   asm volatile(
-    "ld.global.nc.v4.f32 {%0, %1, %2, %3}, [%4];"
-    : "=f"(v0), "=f"(v1), "=f"(v2), "=f"(v3)
-    : "l"(ptr)
-  );
-}
-
-__device__ void st_v4_f32(float* ptr, float v0, float v1, float v2, float v3) {
-  asm volatile(
-    "st.global.v4.f32 [%0], {%1, %2, %3, %4};"
+    "{\n"
+    "\t\t.reg .pred %p;\n"
+    "\t\tsetp.eq.u32 %p, %0, 0;\n"
+    "\t\t@%p st.global.release.gpu.b8 [%1], 1;\n"
+    "\t}"
     :
-    : "l"(ptr), "f"(v0), "f"(v1), "f"(v2), "f"(v3)
+    : "r"(tid), "l"(ptr)
   );
 }
 
 __global__ void add_vectors(const float *__restrict__ a,
-                            const float *__restrict__ b, float *__restrict__ c,
+                            const float *__restrict__ b,
+                            float *__restrict__ c,
+                            bool *__restrict__ done_stats,
                             int blockSize, int totalElems) {
   auto blockIndex = blockIdx.x;
+
+  while (blockIndex > 0 && !done_stats[blockIndex - 1]) {
+    __nanosleep(1000);
+  }
+
   auto numThreads = blockDim.x;
   auto numElems = (blockSize + numThreads - 1) / numThreads;
   auto tid = threadIdx.x;
@@ -79,21 +82,13 @@ __global__ void add_vectors(const float *__restrict__ a,
   // Ensure that `upperBound` is not greater than `totalElems`
   upperBound = min(upperBound, totalElems);
 
-  int idx = lowerBound;
-  float a0, a1, a2, a3;
-  float b0, b1, b2, b3;
-
   #pragma unroll 1
-  for (; idx + 4 < upperBound; idx += 4) {
-    ld_v4_f32(a0, a1, a2, a3, &a[idx]);
-    ld_v4_f32(b0, b1, b2, b3, &b[idx]);
-    st_v4_f32(&c[idx], a0 + b0, a1 + b1, a2 + b2, a3 + b3);
-  }
-
-  #pragma unroll 1
-  for (; idx < upperBound; idx++) {
+  for (int idx = lowerBound; idx < upperBound; idx++) {
     c[idx] = a[idx] + b[idx];
   }
+
+  __syncthreads();
+  set_done(tid, &done_stats[blockIndex]);
 }
 
 }
@@ -108,7 +103,7 @@ int main(int argc, char **argv) {
     totalElems = std::atoi(argv[1]);
   }
 
-  const int kBlockX = totalElems;
+  const int kBlockX = totalElems / 2;
   const int threadElems = (kBlockX + kNumThreads - 1) / kNumThreads;
   printf("threadElems = %d\n", threadElems);
   assert(threadElems % 4 == 0 && "threadElems is not divisible by 4");
@@ -133,18 +128,28 @@ int main(int argc, char **argv) {
   CHECK_CUDA_ERROR(cudaMalloc(&dev_b_ptr, kNumBytes));
   CHECK_CUDA_ERROR(cudaMalloc(&dev_c_ptr, kNumBytes));
 
+  bool *dev_done_stats = nullptr;
+  CHECK_CUDA_ERROR(cudaMalloc(&dev_done_stats, 2));
+
   // Copy inputs from CPU to GPU
   CHECK_CUDA_ERROR(
       cudaMemcpy(dev_a_ptr, a.data(), kNumBytes, cudaMemcpyHostToDevice));
   CHECK_CUDA_ERROR(
       cudaMemcpy(dev_b_ptr, b.data(), kNumBytes, cudaMemcpyHostToDevice));
 
-  dim3 gridSize(1, 1, 1);
+  // Clear dev_done_stats
+  bool init_stats[] = {false, false};
+  CHECK_CUDA_ERROR(
+      cudaMemcpy(dev_done_stats, init_stats, 2, cudaMemcpyHostToDevice));
+
+  // Launch 2 blocks
+  dim3 gridSize(2, 1, 1);
   dim3 blockSize(kNumThreads, 1, 1);
 
 
   Timer timer;
-  add_vectors<<<gridSize, blockSize>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr,
+  add_vectors<<<gridSize, blockSize>>>(dev_a_ptr, dev_b_ptr, 
+                                       dev_c_ptr, dev_done_stats,
                                        kBlockX, totalElems);
   CHECK_CUDA_ERROR(cudaGetLastError());
   CHECK_CUDA_ERROR(cudaDeviceSynchronize());
@@ -156,6 +161,7 @@ int main(int argc, char **argv) {
   cudaFree(dev_a_ptr);
   cudaFree(dev_b_ptr);
   cudaFree(dev_c_ptr);
+  cudaFree(dev_done_stats);
 
   auto cpu_res = std::vector<DataType>(totalElems, 0);
   for (int i = 0; i < totalElems; i++) {

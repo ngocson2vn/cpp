@@ -8,10 +8,13 @@ Status | Topic                                               | Doc
    OK  | Memory Hierarchy                                    | [./MEMORY.md](./MEMORY.md)
    OK  | SM Architecture                                     | [./02_gpu_sm.md](./02_gpu_sm.md)
    OK  | Register File                                       | [./03_gpu_sm_register_file.md](./03_gpu_sm_register_file.md)
-   \-  | Restrictive Pointers                                | [../src/restrict_pointers/README.md](../src/restrict_pointers/README.md)
-   \-  | Loop unrolling                                      | \-
-   \-  | Read global memory using vectorized instructions    | \-
-   \-  | How to bypass SM's private L1                       | \
+   OK  | Restrictive Pointers                                | [../src/restrict_pointers/README.md](../src/restrict_pointers/README.md)
+   OK  | Loop unrolling                                      | [../src/loop_unroll/README.md](../src/loop_unroll/README.md)
+   OK  | Read global memory using vectorized instructions    | [../src/vectorized_load_store/README.md](../src/vectorized_load_store/README.md)
+   \-  | How to bypass SM's private L1                       | \-
+   \-  | Memory barrier                                      | \-
+   \-  | Scoped synchronizations                             | \-
+   \-  | Default memory address alignment of cudaMalloc      | \-
 
 
 ## 2. Inline PTX
