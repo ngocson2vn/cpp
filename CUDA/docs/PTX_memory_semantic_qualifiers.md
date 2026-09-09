@@ -145,7 +145,35 @@ Because GPU memory is deeply hierarchical, enforcing a global `.acquire` or `.re
 * **`.gpu`:** Synchronizes across all threads running on the current GPU.
 * **`.sys`:** Synchronizes across the entire system, including multiple GPUs (via NVLink) or the host CPU.
 
-For example, a complete PTX instruction using these semantics looks like this:
-`st.global.release.gpu.b32 [ptr], %r1;` (Store to global memory, with release semantics, visible to the whole GPU).
+For example, the complete PTX instructions using these semantics look like this:
 
-`ld.global.acquire.gpu.b32 %r1, [ptr];` guarantees a read from a globally coherent memory level (L2 or VRAM), ensuring that it strictly observes any `.release.gpu` store executed by another SM.
+- `st.global.release.gpu.b32 [ptr], %r1;` stores to global memory, with release semantics, visible to the whole GPU.
+
+- `ld.global.acquire.gpu.b32 %r1, [ptr];` guarantees a read from a globally coherent memory level (L2 or VRAM), ensuring that it strictly observes any `.release.gpu` store executed by another SM.
+
+---
+
+<br/>
+
+# Clarify "Synchronization" Aspect
+```text
+As for two instructions `st.global.release.gpu` and `ld.global.acquire.gpu`, they only affect two aspects (1) memory ordering and (2) cache management, right? Do they also affect threads synchronization within the same GPU?
+```
+You are exactly right. Those instructions intrinsically affect **only** memory ordering and cache visibility. They do **not** pause, block, or inherently synchronize thread execution control flow.
+
+If Thread B executes a `ld.global.acquire.gpu`, it does not wait for Thread A to execute a `st.global.release.gpu`. It simply executes the load immediately, fetching whatever value is in the L2 cache or VRAM at that exact clock cycle, and continues to the next instruction.
+
+To understand how this fits into GPU programming, it helps to distinguish between the two types of synchronization:
+
+### 1. Memory Synchronization (Data Visibility)
+
+This is what `.acquire` and `.release` do. They ensure that *if* Thread B happens to read the data written by Thread A, all the memory operations that came before it (the `.release` store instruction executed by Thread A) are correctly ordered and visible. They manage the state of the memory hierarchy, not the state of the thread.
+
+### 2. Execution Synchronization (Control Flow)
+
+This is when threads physically wait for one another.
+
+* **Hardware Barriers:** Instructions like `bar.sync` (exposed in CUDA as `__syncthreads()`) force the hardware scheduler to put a warp to sleep until all other threads in the block reach the same point.
+* **Software Polling (Spinlocks):** If you want to synchronize execution across the whole GPU using `.acquire` and `.release`, you have to manually combine them with control flow instructions (like a `while` loop) to make the thread spin and repeatedly execute the `ld.global.acquire` until the expected value appears.
+
+In short: `.acquire` and `.release` provide the **safe memory foundation** that allows you to build cross-GPU thread synchronization, but the instructions themselves will not suspend a thread's execution.

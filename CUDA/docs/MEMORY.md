@@ -41,4 +41,64 @@ Because the hardware does not automatically synchronize the L1 caches, the burde
 
 
 # Read-Only Cache
+Read-only cache is a hardware component, which is separate from L1 cache.
 
+The following PTX instruction fetches data from read-only cache:
+```mlir
+ld.global.nc.v4.f32 {%0, %1, %2, %3}, [%4];
+```
+The `.nc` modifier is a powerful performance optimization. By routing the load through the read-only data cache, you gain several benefits:
+
+1. **Higher Bandwidth:** The read-only cache has a separate memory pipeline. Using it relieves pressure on the standard L1 data cache, effectively increasing the total cache bandwidth available to your streaming multiprocessor (SM).
+2. **Looser Alignment Rules:** The read-only cache is often better optimized for unaligned or scattered memory access patterns than standard global loads.
+3. **No Coherency Overhead:** Because the GPU knows it doesn't have to monitor this cache for writes from other threads, it saves hardware tracking overhead.
+
+
+# Cache Line
+In an NVIDIA GPU, a **cache line** is the fundamental, atomic unit of data transfer between the slower global memory (VRAM) and the faster on-chip caches (L1 and L2).
+
+Whenever a thread requests a single piece of data from memory, the GPU doesn't just fetch that one byte or float. Instead, it pulls in an entire cache line containing the requested data and the data immediately surrounding it.
+
+Here is how cache lines dictate GPU memory architecture and performance.
+
+### Size and Structure
+
+On modern NVIDIA architectures (like Ampere, Hopper, and Ada Lovelace), a standard cache line is **128 bytes**.
+
+To optimize bandwidth, this 128-byte line is typically subdivided into four **32-byte sectors**. If a memory request only touches data within one or two of those 32-byte sectors, the GPU is smart enough to only fetch the required sectors, saving memory bandwidth.
+
+### Why Cache Lines Matter: The Warp
+
+To understand why the 128-byte size is significant, you have to look at how GPUs process data. NVIDIA GPUs group execution threads into bundles of 32, known as a **warp**.
+
+When a warp executes a memory read instruction, all 32 threads are requesting data at the same time. If each thread requests a standard 32-bit (4-byte) floating-point number, the total data requested by the warp is exactly:
+**32 threads × 4 bytes = 128 bytes.**
+
+This perfect alignment is not an accident—the cache line is sized precisely to serve an entire warp in a single, efficient memory transaction.
+
+---
+
+Here is a visual representation of how threads in a warp map to memory addresses:
+
+---
+
+### Memory Coalescing
+
+The relationship between warp execution and cache lines leads to the most important performance optimization in CUDA programming: **memory coalescing**.
+
+* **Coalesced Access (High Performance):** If all 32 threads in a warp request consecutive memory addresses, the hardware "coalesces" (combines) these 32 individual requests into a single 128-byte cache line fetch. The memory bus is used at 100% efficiency.
+* **Uncoalesced/Scattered Access (Low Performance):** If the threads request scattered data (e.g., thread 0 wants address 10, thread 1 wants address 500, etc.), the requested data spans multiple different cache lines. The GPU is forced to fetch several 128-byte chunks (or 32-byte sectors) just to retrieve the scattered values, throwing away the unused data in those chunks. This can drop your memory bandwidth efficiency to 20% or lower, creating a massive bottleneck.
+
+
+```text
+If threads in a warp access memory addresses that are not in the same cache line, will the memory controller fetch all different cache lines?
+```
+**Yes.** If the threads in a warp request data scattered across multiple different cache lines, the memory controller has no choice but to fetch *every single one* of those required cache lines.
+
+Here is exactly what happens in the hardware during this scenario (known as **uncoalesced access**):
+
+* **Address Calculation:** When the memory instruction is executed, the Load/Store Unit (LSU) computes the memory addresses needed by all 32 threads in the warp.
+* **Transaction Serialization:** The hardware determines how many 128-byte cache lines (and their internal 32-byte sectors) are needed to fulfill the 32 requests. If the threads request addresses spanning 15 different cache lines, the memory controller must issue 15 separate memory transactions. In the worst-case scenario, it will issue 32 separate transactions.
+* **Massive Bandwidth Waste:** The memory controller can only fetch data in minimum chunk sizes (usually a 32-byte sector). If a single thread needs a 4-byte float from a sector, the GPU still fetches all 32 bytes, discards the other 28 bytes, and moves on. In this scenario, **87.5% of your memory bandwidth is wasted** transferring useless data.
+
+Because the warp cannot continue executing until all of these separate, serialized memory fetches complete, this creates a massive stall and drops your memory throughput drastically.

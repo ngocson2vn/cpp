@@ -11,10 +11,14 @@ Status | Topic                                               | Doc
    OK  | Restrictive Pointers                                | [../src/restrict_pointers/README.md](../src/restrict_pointers/README.md)
    OK  | Loop unrolling                                      | [../src/loop_unroll/README.md](../src/loop_unroll/README.md)
    OK  | Read global memory using vectorized instructions    | [../src/vectorized_load_store/README.md](../src/vectorized_load_store/README.md)
-   \-  | How to bypass SM's private L1                       | \-
-   \-  | Memory barrier                                      | \-
-   \-  | Scoped synchronizations                             | \-
-   \-  | Default memory address alignment of cudaMalloc      | \-
+   OK  | How to bypass SM's private L1                       | [../src/bypass_L1/](../src/bypass_L1/)
+   OK  | Atomicity                                           | [../src/atomic_read_modify_write/](../src/atomic_read_modify_write/)
+   \-  | Default memory address alignment of cudaMalloc      | [./CUDA_cudaMalloc.md](./CUDA_cudaMalloc.md)
+   \-  | Memory barriers                                     | \-
+   \-  | Scoped synchronizations (warp, cluster, CTA, CTAs)  | \-
+   \-  | Persistent GEMM                                     | \-
+   \-  | TMA                                                 | \-
+   \-  | MMA                                                 | \-
 
 
 ## 2. Inline PTX
