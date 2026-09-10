@@ -13,22 +13,36 @@ Status | Topic                                               | Doc
    OK  | Read global memory using vectorized instructions    | [../src/vectorized_load_store/README.md](../src/vectorized_load_store/README.md)
    OK  | How to bypass SM's private L1                       | [../src/bypass_L1/](../src/bypass_L1/)
    OK  | Atomicity                                           | [../src/atomic_read_modify_write/](../src/atomic_read_modify_write/)
-   \-  | Default memory address alignment of cudaMalloc      | [./CUDA_cudaMalloc.md](./CUDA_cudaMalloc.md)
+   OK  | Default memory address alignment of cudaMalloc      | [./CUDA_cudaMalloc.md](./CUDA_cudaMalloc.md)
+   \-  | Shared memory bank conflicts                        | \-
+   \-  | TMA                                                 | \-
+
+
+## 2. Control Flow
+Status | Topic                                               | Doc
+-------|-----------------------------------------------------|--------------------------------------------------------------------------
    \-  | Memory barriers                                     | \-
    \-  | Scoped synchronizations (warp, cluster, CTA, CTAs)  | \-
-   \-  | Persistent GEMM                                     | \-
-   \-  | TMA                                                 | \-
+
+
+## 3. Tensor Core
+Status | Topic                                               | Doc
+-------|-----------------------------------------------------|--------------------------------------------------------------------------
    \-  | MMA                                                 | \-
 
+## 4. GEMM
+Status | Topic                                               | Doc
+-------|-----------------------------------------------------|--------------------------------------------------------------------------
+   \-  | Persistent GEMM                                     | \-
 
-## 2. Inline PTX
+
+## 5. Inline PTX
 - How to execute a PTX instruction?
 
-## 3. Inspect a CUBIN file
+## 6. Inspect a CUBIN file
 
-## 4. Builtins
+## 7. Builtins
 - Sort on GPU
 
-## 5. CUDA APIs
+## 8. CUDA APIs
 - CUDA APIs
-
