@@ -15,6 +15,7 @@ Status | Topic                                               | Doc
    OK  | Atomicity                                           | [../src/atomic_read_modify_write/](../src/atomic_read_modify_write/)
    OK  | Default memory address alignment of cudaMalloc      | [./CUDA_cudaMalloc.md](./CUDA_cudaMalloc.md)
    \-  | Shared memory bank conflicts                        | \-
+   \-  | Static and dynamic shared memory usages             | \-
    \-  | TMA                                                 | \-
 
 
