@@ -11,8 +11,7 @@ defines
 ## 2. Fuse Ops
 Steps
 - Fuse ops into a MLIR function - callee
-- Create a caller function with required parameters and an attribute storing the callee function name
-- Replace fused ops with the caller function
+- Replace fused ops with a custom op that accepts all necessary input tensors extracted from fused ops.
 
 Fusion Strategy
 - Vertical Fusion:

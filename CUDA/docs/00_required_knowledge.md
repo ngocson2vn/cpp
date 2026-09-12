@@ -17,6 +17,7 @@ Status | Topic                                               | Doc
    \-  | Shared memory bank conflicts                        | \-
    \-  | Static and dynamic shared memory usages             | \-
    \-  | TMA                                                 | \-
+   \-  | Pinned Memory                                       | \-
 
 
 ## 2. Control Flow
