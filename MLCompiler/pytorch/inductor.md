@@ -2,6 +2,12 @@
 <!-- TOC START -->
 - [Call Stack](#call-stack)
 - [Flow](#flow)
+  - [How Dynamo builds a FX graph](#how-dynamo-builds-a-fx-graph)
+    - [1. Intercepting the Execution (PEP 523)](#1-intercepting-the-execution-pep-523)
+    - [2. Abstract Interpretation of Bytecode](#2-abstract-interpretation-of-bytecode)
+    - [3. Emitting the FX Graph](#3-emitting-the-fx-graph)
+    - [4. The Safety Valve: Graph Breaks](#4-the-safety-valve-graph-breaks)
+    - [5. Compiling and Guarding](#5-compiling-and-guarding)
 - [Inductor config](#inductor-config)
 - [Backend registration](#backend-registration)
 - [Debug](#debug)
@@ -68,6 +74,8 @@
 - [Codegen Combo Kernels](#codegen-combo-kernels)
 - [Triton Config](#triton-config)
 - [Get compiled module path](#get-compiled-module-path)
+  - [Approach 1: find the biggest python module](#approach-1-find-the-biggest-python-module)
+  - [Approach 1: print out the module path](#approach-1-print-out-the-module-path)
 - [Debug Compiled Module](#debug-compiled-module)
 - [Debug Triton Kernels](#debug-triton-kernels)
 - [Triton GEMM Autotune](#triton-gemm-autotune)
@@ -77,7 +85,9 @@
 - [Common Issues](#common-issues)
   - [CppCompileError: C++ compile error](#cppcompileerror-c-compile-error)
     - [How to get vec_isa_cmd](#how-to-get-vec_isa_cmd)
+    - [How PyTorch detects AMX](#how-pytorch-detects-amx)
 <!-- TOC END -->
+
 
 
 
@@ -203,6 +213,51 @@ Summary: FX graph --[lowering]--> Inductor IR (Buffers)--> Scheduler --[fusing]-
 2. Understand fusing
 3. Understand codegening
 
+## How Dynamo builds a FX graph
+TorchDynamo (often just called Dynamo) takes a radically different approach to graph capture compared to older PyTorch tracers like `torch.jit.script` or `torch.fx.symbolic_trace`. Instead of requiring you to modify your code or proxying Python execution, **Dynamo works by analyzing and modifying Python bytecode at runtime.**
+
+Here is the step-by-step breakdown of how Dynamo builds an FX graph.
+
+### 1. Intercepting the Execution (PEP 523)
+
+When you wrap a function or `nn.Module` in `torch.compile()`, Dynamo hooks into the CPython interpreter using a feature called **PEP 523** (which provides an API for custom frame evaluation).
+
+Instead of letting Python execute the function's bytecode normally, the interpreter hands the execution frame over to Dynamo just before the function runs.
+
+### 2. Abstract Interpretation of Bytecode
+
+Dynamo reads the Python bytecode instruction by instruction. However, it doesn't execute the instructions with real data. Instead, it performs **abstract interpretation**:
+
+* **Real Tensors become Fake Tensors:** Inputs to the function are converted into "Fake Tensors" that track metadata (shape, dtype, device, requires_grad) but hold no actual data.
+* **Tracking state:** Dynamo maintains an internal state of the Python virtual machine (tracking the stack, local variables, and global variables).
+* **Partial Evaluation:** If Dynamo sees standard Python operations with known values (e.g., adding two integers, unpacking a tuple, or iterating over a list of known length), it evaluates them on the spot and essentially "optimizes them away."
+
+### 3. Emitting the FX Graph
+
+As Dynamo steps through the bytecode, it separates Python logic from PyTorch operations:
+
+* When it encounters a PyTorch operation (like `torch.matmul` or `tensor.relu()`) applied to a Fake Tensor, it **records that operation as a node in an FX graph**.
+* It feeds the resulting Fake Tensor back into its internal stack to be used by subsequent instructions.
+* The final output of this process is a clean, contiguous FX graph consisting *only* of PyTorch operations, with all the pure Python control flow (like loops and if-statements that didn't depend on tensor data) flattened out.
+
+### 4. The Safety Valve: Graph Breaks
+
+If Dynamo encounters a Python bytecode instruction it doesn't know how to evaluate safely (e.g., calling an opaque C-extension, printing the actual *value* of a tensor, or an `if` statement whose condition depends on the un-computed data inside a tensor), it triggers a **Graph Break**.
+
+Instead of crashing, Dynamo gracefully splits the execution:
+
+1. It finalizes the FX graph for everything it captured up to that point.
+2. It lets standard Python execute the unsupported instruction.
+3. It starts a brand-new FX graph for the remaining bytecode.
+
+### 5. Compiling and Guarding
+
+Once an FX graph is built, Dynamo passes it to the backend (usually **TorchInductor**) which compiles it into optimized C++ or Triton kernels.
+
+To ensure this compiled code is safe to reuse on subsequent function calls, Dynamo generates **Guards**. Guards are lightweight Python checks (e.g., `if input_tensor.shape == (32, 64) and input_tensor.dtype == torch.float32`) that run before your function executes.
+
+* If the new inputs pass the guards, PyTorch bypasses Python entirely and runs the compiled machine code.
+* If they fail (e.g., the batch size changed), Dynamo intercepts the frame again and builds a new FX graph for the new shapes.
 
 # Inductor config
 /data00/home/son.nguyen/workspace/cpp/MLCompiler/pytorch/torch/_inductor/config.py
