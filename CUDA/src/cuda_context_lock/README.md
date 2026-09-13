@@ -16,7 +16,11 @@ Because 4 C++ threads are simultaneously bombarding the same context with gelu l
 ## Case 3: Multi-CUDA Context
 Each thread uses a separate CUDA context => No lock contention
 
-Use MPS to funnel multiple MPS client contexts into a single MPS server CUDA context => bypass time-sliced scheduling bottleneck.
+Use MPS to funnel multiple MPS client contexts into a single MPS server CUDA context => bypass time-sliced scheduling bottleneck as shown in the following nsys profile:
+
+<img src="./multi_cuda_ctx.png" />
+
+<br/>
 
 To fully understand how your multi-context architecture achieves lock-free concurrency, we need to look under the hood of how NVIDIA implemented MPS.
 
@@ -32,6 +36,8 @@ Before your application even runs, the system administrator starts the `nvidia-c
 
 * **Role:** The daemon acts as a lightweight background listener and gatekeeper. It listens on a designated Unix domain socket (defined by the `CUDA_MPS_PIPE_DIRECTORY` environment variable).
 * **Action:** When your application starts, it does not immediately talk to the GPU. Instead, the CUDA driver inside your process detects the MPS pipe and pings the daemon.
+
+---
 
 ### Phase 2: Client Registration & The MPS Server
 
@@ -77,6 +83,7 @@ Now, your worker threads begin picking up tasks and executing kernels. Here is h
 To visualize the pipeline during an active kernel launch:
 
 **Your C++ Thread (Context A)** -> *writes directly to* -> **GPU Hardware Queue A**
+
 **Your C++ Thread (Context B)** -> *writes directly to* -> **GPU Hardware Queue B**
 
 The **MPS Daemon** and **MPS Server** are not involved in this hot path. They only exist to perform the initial setup that allows Context A and Context B to safely write to the same physical GPU simultaneously without crashing the driver.
