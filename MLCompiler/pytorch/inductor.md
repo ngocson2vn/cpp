@@ -180,6 +180,7 @@ Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especiall
 ```
 
 # Flow
+```text
 Dynamo -> FX graph -> Inductor 
     │                      │
     │                      └─> Lower aten ops to Inductor IR ops
@@ -205,7 +206,7 @@ Dynamo -> FX graph -> Inductor
     └─> convert_frame.py: class CatchErrorsWrapper returns the guarded_code to the caller in `torch/csrc/dynamo/eval_frame.c`.
     │
     └─> The caller evaluates the guarded code
-
+```
 
 Summary: FX graph --[lowering]--> Inductor IR (Buffers)--> Scheduler --[fusing]--> FusedSchedulerNode nodes --> CUDACombinedScheduling --[codegening]--> Triton kernels
 
