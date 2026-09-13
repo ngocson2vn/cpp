@@ -8,3 +8,5 @@ xmain: main.cpp
 	clang++ -Xclang -ast-print -fsyntax-only main.cpp > main.cppx
 	code main.cppx
 
+clean:
+	@rm -fv main *.o

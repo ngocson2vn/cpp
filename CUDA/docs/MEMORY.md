@@ -7,7 +7,7 @@
 
 
 # GPU Cache Hierarchy
-<img src="./gpu_architecture_details.png" width="60%" />
+<img src="./images/gpu_architecture_details.png" width="60%" />
 
 * **L1 Cache (Private):** Each Streaming Multiprocessor (SM) has its own L1 cache. It is incredibly fast but only serves the threads running on that specific SM.
 * **L2 Cache (Shared):** A larger, unified L2 cache sits between the SMs and the global memory (VRAM). All SMs share this cache.
@@ -79,6 +79,8 @@ This perfect alignment is not an accident—the cache line is sized precisely to
 ---
 
 Here is a visual representation of how threads in a warp map to memory addresses:
+
+<img src="./images/memory_access.png" />
 
 ---
 

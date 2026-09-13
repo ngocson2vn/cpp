@@ -132,5 +132,6 @@
         "/opt/tiger/byted_tf_opt",
         "/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages"
     ],
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "cmake.sourceDirectory": "/data02/home/son.nguyen/workspace/cpp/Examples/ninja-hello-world"
 }

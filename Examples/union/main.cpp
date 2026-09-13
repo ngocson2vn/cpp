@@ -35,6 +35,8 @@ int main(int argc, char** argv) {
   v.combined_id = {0, 1};
   std::cout << "&v.combined_id=" << &v.combined_id << std::endl;
   std::cout << "&v.id=" << &v.id << std::endl;
+  std::cout << "v.combined_id.device_id=" << v.combined_id.device_id << std::endl;
+  std::cout << "v.combined_id.context_id=" << v.combined_id.context_id << std::endl;
   std::cout << "v.id=" << v.id << std::endl; // 2**16
 
   std::cout << std::endl;
@@ -43,5 +45,15 @@ int main(int argc, char** argv) {
   v2.combined_id = {0, 2};
   std::cout << "&v2.combined_id=" << &v2.combined_id << std::endl;
   std::cout << "&v2.id=" << &v2.id << std::endl;
+  std::cout << "v2.combined_id.device_id=" << v2.combined_id.device_id << std::endl;
+  std::cout << "v2.combined_id.context_id=" << v2.combined_id.context_id << std::endl;
   std::cout << "v2.id=" << v2.id << std::endl; // 2**17
+
+  std::cout << std::endl;
+
+  DeviceContextId_U v3;
+  v3.id = 196609;
+  std::cout << "v3.id=" << v3.id << std::endl;
+  std::cout << "v3.combined_id.device_id=" << v3.combined_id.device_id << std::endl;
+  std::cout << "v3.combined_id.context_id=" << v3.combined_id.context_id << std::endl;
 }
