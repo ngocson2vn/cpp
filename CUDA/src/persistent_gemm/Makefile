@@ -14,7 +14,8 @@ endif
 NVCC_FLAGS := $(NVCC_GENCODE_FLAGS)
 
 main: main1
-ptx: main1.ptx main2.ptx
+ptx: main1.ptx
+# ptx: main1.ptx main2.ptx
 
 main1: main1.cu
 	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -o $@ main1.cu

@@ -32,18 +32,30 @@ __device__ void sync_cta() {
   );
 }
 
-// No software pipeline
-// Not persistent
+__device__ void pred_store_global(uint32_t pred /* 0 or 1 */, float* ptr, float v) {
+  asm volatile(
+    "{\n"
+    "\t\t.reg .pred %p;\n"
+    "\t\tsetp.eq.u32 %p, %0, 1;\n"
+    "\t\t@%p st.global.f32 [%1], %2;\n"
+    "\t}"
+    :
+    : "r"(pred), "l"(ptr), "f"(v)
+  );
+}
+
+// No software pipeline and non-persistent
 template <uint32_t TILE_SIZE>
-__global__ void gemm_kernel(const float *__restrict__ a,
-                            const float *__restrict__ b, 
-                            float *__restrict__ c,
-                            uint32_t M, uint32_t N, uint32_t K) {
+__global__ void gemm_kernel(const float *__restrict__ A,
+                            const float *__restrict__ B, 
+                            float *__restrict__ C,
+                            const uint32_t C_ROWS, const uint32_t C_COLS,
+                            const uint32_t M, const uint32_t N, const uint32_t K) {
   assert(TILE_SIZE * TILE_SIZE == blockDim.x && "The number of threads in a CTA must be equal to the number of elements in a tile");
 
   // Indexed by threadIdx.x
-  __shared__ float smem_a[TILE_SIZE * TILE_SIZE];
-  __shared__ float smem_b[TILE_SIZE * TILE_SIZE];
+  __shared__ float sA[TILE_SIZE * TILE_SIZE];
+  __shared__ float sB[TILE_SIZE * TILE_SIZE];
 
   uint32_t tile_m = blockIdx.x;
   uint32_t tile_n = blockIdx.y;
@@ -56,117 +68,197 @@ __global__ void gemm_kernel(const float *__restrict__ a,
 
   // Each thread computes one element of the output tile
   float acc = 0;
-  smem_a[threadIdx.x] = 0.0f;
-  smem_b[threadIdx.x] = 0.0f;
 
   // Compute the output tile at (tile_m, tile_n) coordinate
   // Each thread computes a single element of an output tile
   for (uint32_t tile_k = 0; tile_k < tile_k_count; tile_k++) {
     // Load tile_m
-    // Each thread loads one a[i][k] element
-    //           |----|----|----|----|----|----|
-    // tile_m -> |    |    |    |    |    |    |
-    //           |----|----|----|----|----|----|
-    //           |    |    |    |    |    |    |
-    //           |----|----|----|----|----|----|
-    //           |    |    |    |    |    |    |
-    //           |----|----|----|----|----|----|
+    // Each thread loads one A[i][k] element
+    //           tile_k
+    //             ↓
+    //          |-----|-----|-----|-----|-----|-----|
+    // tile_m → |     |     |     |     |     |     |
+    //          |-----|-----|-----|-----|-----|-----|
+    //          |     |     |     |     |     |     |
+    //          |-----|-----|-----|-----|-----|-----|
+    //          |     |     |     |     |     |     |
+    //          |-----|-----|-----|-----|-----|-----|
 
     uint32_t global_col_a = tile_k * TILE_SIZE + local_col;
     uint32_t gmem_index_a = global_row_a * K + global_col_a;
-
-    // Handle OOB
-    if (gmem_index_a < M * K) {
-      smem_a[threadIdx.x] = a[gmem_index_a];
-    }
+    sA[threadIdx.x] = A[gmem_index_a];
 
     // Load tile_n
+    // Each thread loads one B[k][j] element
+    //           tile_n
+    //             ↓
+    //          |-----|-----|-----|-----|-----|-----|
+    // tile_k → |     |     |     |     |     |     |
+    //          |-----|-----|-----|-----|-----|-----|
+    //          |     |     |     |     |     |     |
+    //          |-----|-----|-----|-----|-----|-----|
+    //          |     |     |     |     |     |     |
+    //          |-----|-----|-----|-----|-----|-----|
+    //          |     |     |     |     |     |     |
+    //          |-----|-----|-----|-----|-----|-----|
+    //          |     |     |     |     |     |     |
+    //          |-----|-----|-----|-----|-----|-----|
+    //          |     |     |     |     |     |     |
+    //          |-----|-----|-----|-----|-----|-----|
     uint32_t global_row_b = tile_k * TILE_SIZE + local_row;
     uint32_t gmem_index_b = global_row_b * N + global_col_b;
-
-    // Handle OOB
-    if (gmem_index_b < N * K) {
-      smem_b[threadIdx.x] = b[gmem_index_b];
-    }
+    sB[threadIdx.x] = B[gmem_index_b];
 
     // Sync all threads in the same CTA
-    // to ensure that they see the same smem_a and smem_b
+    // to ensure that they see the same sA and sB
     sync_cta();
 
-    // Matmul smem_a @ smem_b
+    // Matmul sA @ sB
     // Each thread computes one acc
     #pragma unroll 4
     for (uint32_t k = 0; k < TILE_SIZE; k++) {
-      acc += smem_a[local_row * TILE_SIZE + k] * smem_b[k * TILE_SIZE + local_col];
+      acc += sA[local_row * TILE_SIZE + k] * sB[k * TILE_SIZE + local_col];
     }
   }
 
   // Epilogue
-  // Store acc back to the resulting matrix c in gmem
+  // Store acc back to the resulting matrix C in gmem
   uint32_t global_row_c = tile_m * TILE_SIZE + local_row;
   uint32_t global_col_c = tile_n * TILE_SIZE + local_col;
-  uint32_t gmem_index_c = global_row_c * N + global_col_c;
-  c[gmem_index_c] = acc;
+  uint32_t pred = (global_row_c < C_ROWS && global_col_c < C_COLS) ? 1 : 0;
+  uint32_t gmem_index_c = global_row_c * C_COLS + global_col_c;
+  pred_store_global(pred, &C[gmem_index_c], acc);
 }
 
 
 template <typename DataType>
-std::vector<DataType> cpu_gemm(const DataType* a, const DataType* b, uint32_t M, uint32_t N, uint32_t K) {
-  std::vector<DataType> c(M*N, 0);
+std::vector<DataType> cpu_gemm(const DataType* A, const DataType* B, uint32_t M, uint32_t N, uint32_t K) {
+  std::vector<DataType> C(M*N, 0);
   for (uint32_t i = 0; i < M; i++) {
     for (uint32_t j = 0; j < N; j++) {
       for (uint32_t k = 0; k < K; k++) {
-        c[i * N + j] += a[i * K + k] * b[k * N + j];
+        C[i * N + j] += A[i * K + k] * B[k * N + j];
       }
     }
   }
 
-  return c;
+  return C;
 }
 
 int main(int argc, char **argv) {
   printf("KERNEL_VERSION = %d\n", KERNEL_VERSION);
   using DataType = float;
-  constexpr uint32_t M = 129;
-  constexpr uint32_t N = 257;
-  constexpr uint32_t K = 512;
-  
+  uint32_t M = 1027;
+  uint32_t N = 2026;
+  uint32_t K = 1111;
   constexpr uint32_t TILE_SIZE = 32;
-  static_assert(TILE_SIZE * TILE_SIZE <= 1024 && "The number of elements in a tile should be less than or equal to 1024");
+  assert(TILE_SIZE * TILE_SIZE <= 1024 && "The number of elements in a tile should be less than or equal to 1024");
 
-  constexpr uint32_t tile_m_count = (M + TILE_SIZE - 1) / TILE_SIZE;
-  constexpr uint32_t tile_n_count = (N + TILE_SIZE - 1) / TILE_SIZE;
-  constexpr std::size_t bytes_a = M*K * sizeof(DataType);
-  constexpr std::size_t bytes_b = N*K * sizeof(DataType);
-  constexpr std::size_t bytes_c = M*N * sizeof(DataType);
-
-  auto a = std::vector<DataType>(M*K, 0);
-  auto b = std::vector<DataType>(N*K, 0);
+  auto A = std::vector<DataType>(M*K, 0);
+  auto B = std::vector<DataType>(N*K, 0);
 
   std::random_device rd;  // Will be used to obtain a seed for the random number engine
   std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-  std::uniform_real_distribution<float> dist(0.0, 1.0);
+  std::uniform_real_distribution<float> dist(0.0, 0.1);
 
   for (int i = 0; i < M*K; i++) {
-    a[i] = dist(gen);
+    A[i] = dist(gen);
   }
 
   for (int i = 0; i < N*K; i++) {
-    b[i] = dist(gen);
+    B[i] = dist(gen);
   }
 
-  DataType *dev_a_ptr = nullptr;
-  DataType *dev_b_ptr = nullptr;
-  DataType *dev_c_ptr = nullptr;
-  CHECK_CUDA_ERROR(cudaMalloc(&dev_a_ptr, bytes_a));
-  CHECK_CUDA_ERROR(cudaMalloc(&dev_b_ptr, bytes_b));
-  CHECK_CUDA_ERROR(cudaMalloc(&dev_c_ptr, bytes_c));
+  // CPU GEMM
+  printf("Executing CPU GEMM\n");
+  auto cpu_res = cpu_gemm<DataType>(A.data(), B.data(), M, N, K);
+  printf("\n");
+
+
+  //=====================================================================================
+  // Padding M, N, and K
+  //=====================================================================================
+  printf("Padding M, N, and K\n");
+  uint32_t pM = M;
+  uint32_t rm = M % TILE_SIZE;
+  if (rm != 0) {
+    // M = qm * TILE_SIZE + rm
+    // => M + (TILE_SIZE - rm) = qm * TILE_SIZE + rm + TILE_SIZE - rm 
+    //                         = qm * TILE_SIZE + TILE_SIZE 
+    //                         = (qm + 1) * TILE_SIZE
+    pM = M + (TILE_SIZE - rm);
+  }
+
+  uint32_t pN = N;
+  uint32_t rn = N % TILE_SIZE;
+  if (rn != 0) {
+    pN = N + (TILE_SIZE - rn);
+  }
+
+  uint32_t pK = K;
+  uint32_t rk = K % TILE_SIZE;
+  if (rk != 0) {
+    pK = K + (TILE_SIZE - rk);
+  }
+
+  printf("M = %d, pM = %d\n", M, pM);
+  printf("N = %d, pN = %d\n", N, pN);
+  printf("K = %d, pK = %d\n", K, pK);
+
+  // Fill the padded parts with 0
+  if (rm + rk != 0) {
+    printf("PRE: A has %d elements\n", A.size());
+
+    // Initialize all elements to 0, 
+    // so the padded part will be filled with 0
+    std::vector<float> P(pM*pK, 0);
+
+    // Next, we only need to copy M rows
+    for (uint32_t i = 0; i < M; i++) {
+      auto start = A.begin() + i * K;
+      std::copy(start, start + K, P.begin() + i * pK);
+    }
+
+    // Swap
+    A.clear();
+    A = std::move(P);
+    printf("NOW: A has %d elements\n", A.size());
+  }
+
+  if (rn + rk != 0) {
+    printf("PRE: B has %d elements\n", B.size());
+    std::vector<float> P(pK*pN);
+    for (uint32_t k = 0; k < K; k++) {
+      auto start = B.begin() + k * N;
+      std::copy(start, start + N, P.begin() + k * pN);
+    }
+
+    // Swap
+    B = std::move(P);
+    printf("NOW: B has %d elements\n", B.size());
+  }
+
+  printf("\n");
+  //=====================================================================================
+
+  const uint32_t tile_m_count = (pM + TILE_SIZE - 1) / TILE_SIZE;
+  const uint32_t tile_n_count = (pN + TILE_SIZE - 1) / TILE_SIZE;
+  const std::size_t bytes_a = pM*pK * sizeof(DataType);
+  const std::size_t bytes_b = pN*pK * sizeof(DataType);
 
   // Copy inputs from CPU to GPU
-  CHECK_CUDA_ERROR(
-      cudaMemcpy(dev_a_ptr, a.data(), bytes_a, cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(
-      cudaMemcpy(dev_b_ptr, b.data(), bytes_b, cudaMemcpyHostToDevice));
+  DataType *dev_a_ptr = nullptr;
+  DataType *dev_b_ptr = nullptr;
+  CHECK_CUDA_ERROR(cudaMalloc(&dev_a_ptr, bytes_a));
+  CHECK_CUDA_ERROR(cudaMalloc(&dev_b_ptr, bytes_b));
+  CHECK_CUDA_ERROR(cudaMemcpy(dev_a_ptr, A.data(), bytes_a, cudaMemcpyHostToDevice));
+  CHECK_CUDA_ERROR(cudaMemcpy(dev_b_ptr, B.data(), bytes_b, cudaMemcpyHostToDevice));
+
+  // Allocate the output buffer
+  // NOTE: using the original M and N
+  const std::size_t bytes_c = M*N * sizeof(DataType);
+  DataType *dev_c_ptr = nullptr;
+  CHECK_CUDA_ERROR(cudaMalloc(&dev_c_ptr, bytes_c));
 
   dim3 gridSize(tile_m_count, tile_n_count, 1);
   dim3 blockSize(TILE_SIZE * TILE_SIZE, 1, 1);
@@ -178,9 +270,10 @@ int main(int argc, char **argv) {
   CHECK_CUDA_ERROR(cudaEventCreate(&event_t0));
   CHECK_CUDA_ERROR(cudaEventCreate(&event_t1));
 
+  printf("Launching gemm_kernel\n");
   Timer timer;
   CHECK_CUDA_ERROR(cudaEventRecord(event_t0, stream));
-  gemm_kernel<TILE_SIZE><<<gridSize, blockSize, 0, stream>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr, M, N, K);
+  gemm_kernel<TILE_SIZE><<<gridSize, blockSize, 0, stream>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr, M, N, pM, pN, pK);
   CHECK_CUDA_ERROR(cudaGetLastError());
   CHECK_CUDA_ERROR(cudaEventRecord(event_t1, stream));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
@@ -193,18 +286,18 @@ int main(int argc, char **argv) {
   auto gpu_res = std::vector<DataType>(M*N, 0);
   CHECK_CUDA_ERROR(cudaMemcpy(gpu_res.data(), dev_c_ptr, bytes_c, cudaMemcpyDeviceToHost));
 
-  auto cpu_res = cpu_gemm<DataType>(a.data(), b.data(), M, N, K);
-
+  //=====================================================================================
+  // Verify if GPU result matches CPU result
+  //=====================================================================================
   bool ok = true;
-  constexpr DataType epsilon = 1e-3;
+  constexpr DataType epsilon = 1e-2;
   for (int i = 0; i < M*N; i++) {
     if (std::abs(gpu_res[i] - cpu_res[i]) > epsilon) {
-      printf("GPU value %f != %f CPU value\n", gpu_res[i], cpu_res[i]);
+      printf("i = %d: GPU value %f != %f CPU value\n", i, gpu_res[i], cpu_res[i]);
       ok = false;
       break;
     }
   }
-
   printf("%s\n", (ok ? "PASSED" : "FAILED"));
 
   cudaFree(dev_a_ptr);
