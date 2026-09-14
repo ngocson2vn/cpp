@@ -279,7 +279,7 @@ Performs barrier synchronization and communication within a CTA. Each CTA instan
 **IMPORTANT NOTE**: <br/>
 - Implicitly Aligned: It assumes that all threads in the thread block (CTA) will execute the exact same static instruction (the same line of code).
 - Risk: If you put bar.sync inside an if-else block where some threads take the if and others take the else, the behavior is undefined (often resulting in a deadlock/hang).
-- `barrier.sync` (Explicitly Unaligned): By default, this instruction does not require all threads to hit the exact same instruction line, provided they all reach some barrier with the same ID.
+- `barrier.sync` (Explicitly Unaligned): By default, this instruction does not require all threads to hit **the exact same instruction line**, provided they all reach some barrier with the same ID.
   - Benefit: It is safer for complex control flow.
   - You can force the legacy behavior by adding the modifier .aligned (i.e., `barrier.sync.aligned`), which makes it identical to `bar.sync`.
 
@@ -296,8 +296,32 @@ bar.sync 	0;
 - By default, it assumes all threads in the block participate. Variants like `bar.sync %r, #threads;` exist to specify a subset, but here it's the full-block version.
 <br/>
 
-# .sync.aligned
-Standard warp-level synchronization. All threads in the warp must reach this point together.
+# barrier.sync and alignment concept
+In the context of PTX barriers, "alignment" has nothing to do with memory addresses. Instead, it refers to the program counter (the exact location of the instruction in the code):
+
+* **Unaligned (`barrier.sync 1;`)**: Threads can arrive at logical barrier #1 from entirely different branches in your code. The hardware synchronizes based on the barrier ID (1), regardless of which specific line of code a thread executed to get there. This is useful if different threads take divergent code paths (e.g., executing different functions) but still need to wait for each other at a common point.
+
+* **Aligned (`barrier.sync.aligned 1;`)**: This explicitly tells the compiler and hardware that all participating threads will execute the *exact same instruction* at the same time. If your code diverges into an `if/else` block and threads attempt to hit an aligned barrier from different paths, it will cause undefined behavior or a deadlock.
+
+By omitting the `.aligned` modifier, you are using the unaligned, more flexible variant of the instruction.
+
+### Meaning of `.aligned` (Program Counter Alignment)
+
+This imposes a strict **control flow** constraint.
+
+* **Same Line of Code:** All threads in the Warp (or Warp Group) must execute this instruction from the **exact same memory address** (Program Counter).
+* **No Divergence:** You cannot have half the group execute this instruction inside an `if` block and the other half execute an identical instruction inside an `else` block. Even if the instruction text is identical, the hardware requires the instruction *address* to be identical.
+<br/>
+
+### Program Counter (PC)
+The Hardware Reality: Each thread has a **Program Counter (PC)** register that stores the address of the next instruction it needs to run.<br/>
+When we say `.aligned` requires the instruction addresses to be identical, we mean: "Every thread's Program Counter (PC) must hold the exact same value (e.g., 0x0010)."
+
+**The Execution Flow:**
+1. **Fetch:** The GPU's **Instruction Fetch Unit** reads the machine code from Global Memory (VRAM).
+2. **Cache:** It stores these instructions in the **L1 Instruction Cache (I-Cache)**, which is a small, ultra-fast memory located physically inside the Streaming Multiprocessor (SM).
+3. **Execute:** The Warp Scheduler reads the instruction *from the I-Cache* and dispatches it to the execution units.
+
 
 # Load
 ```MLIR
@@ -593,7 +617,7 @@ Bits 16-31| Row / Lane Index (0 - 127)
 <br/>
 
 Tensor Memory Layout within CTA:<br/>
-<img src="./TMEM.png" width="60%" />
+<img src="./images/TMEM.png" width="60%" />
 <br/>
 
 Tensor Memory (TMEM) addressing is not linear (flat); it is coordinate-based.
@@ -656,31 +680,6 @@ The GPU reads the integer value inside register **`%r27`** and jumps to the corr
 
 This snippet is an optimization used by the compiler. Instead of writing a long chain of `if-else if-else` comparisons (which requires multiple comparison instructions), the compiler generates this **jump table**. It allows the GPU to jump directly to the correct block of code in a single instruction based on the index.
 <br/>
-
-# .sync.aligned modifier
-### Meaning of `.sync` (Synchronization)
-
-This enforces an **implicit barrier** among the participating threads (in the same Warp or Warp Group).
-
-* **Rendezvous:** No thread in the Warp (or Warp Group) can execute this instruction until **all** other threads in the Warp (or Warp Group) have reached it.
-* **Stall:** If thread 0 (or Warp 0) reaches this line but thread 3 (or Warp 3) is still busy with previous work, thread 0 (or Warp 0) will stall and wait.
-
-### Meaning of `.aligned` (Program Counter Alignment)
-
-This imposes a strict **control flow** constraint.
-
-* **Same Line of Code:** All threads in the Warp (or Warp Group) must execute this instruction from the **exact same memory address** (Program Counter).
-* **No Divergence:** You cannot have half the group execute this instruction inside an `if` block and the other half execute an identical instruction inside an `else` block. Even if the instruction text is identical, the hardware requires the instruction *address* to be identical.
-<br/>
-
-### Program Counter (PC)
-The Hardware Reality: Each thread has a **Program Counter (PC)** register that stores the address of the next instruction it needs to run.<br/>
-When we say `.aligned` requires the instruction addresses to be identical, we mean: "Every thread's Program Counter (PC) must hold the exact same value (e.g., 0x0010)."
-
-**The Execution Flow:**
-1. **Fetch:** The GPU's **Instruction Fetch Unit** reads the machine code from Global Memory (VRAM).
-2. **Cache:** It stores these instructions in the **L1 Instruction Cache (I-Cache)**, which is a small, ultra-fast memory located physically inside the Streaming Multiprocessor (SM).
-3. **Execute:** The Warp Scheduler reads the instruction *from the I-Cache* and dispatches it to the execution units.
 
 # mul.lo.s32
 ```MLIR

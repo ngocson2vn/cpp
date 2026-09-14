@@ -11,25 +11,25 @@ defines
 ## 2. Fuse Ops
 Steps
 - Fuse ops into a MLIR function - callee
-- Replace fused ops with a custom op that accepts all necessary input tensors extracted from fused ops.
+- Replace fused ops with a Fusion op that accepts all necessary input tensors extracted from fused ops.
 
 Fusion Strategy
 - Vertical Fusion:
-  - Fuse point-wise ops such as Add, Multiply, Div, Pow, StridedSlice and Boolean ops vertically
+  - Fuse point-wise ops such as Add, Multiply, Div, Pow, Boolean, and tensor slicing ops vertically
   - LayerNorm fusion
   - GELU fusion
   - ReLU(GEMM + Bias) -> call cublasLt API
   - GELU(GEMM + Bias) -> call cublasLt API
-  - Fuse multiple related custom ops
+  - Fuse multiple related Fusion ops
 - Horizontal Fusion:
-  - Fuse multiple unrelated custom ops horizontally
+  - Fuse multiple unrelated Fusion ops horizontally
 
 ## 3. Lower callee functions
 We lower each calle function to a CUDA kernel and a host function that launches the CUDA kernel.
 
 Lowering Pipeline:
 ```txt
-- TF dialect -> MLIR-HLO -> linalg.generic
+- TF dialect -> MLIR-HLO -> Bufferization -> linalg.generic
   -> scf.parallel ops -> Merge scf.parallel ops -> Kernel functions (rely on MLIR SCFToGPU pass)
   -> Host function (uses gpu.launch_func to launch a kernel function)
 
@@ -46,12 +46,12 @@ All CUDA kernels and host functions are compiled into a shared object library. <
 Next, we serialize the `.so` library to a byte string and store it into an attribute of a `Const` node in the model's GraphDef.
 
 ## 4. Runtime
-We develop a custom runtime library to parse and load the model's GraphDef.
+We develop a Fusion runtime library to parse and load the model's GraphDef.
 
 The runtime performs the following steps:
 
 **Loading phase**: <br/>
-- Loops over the GraphDef's nodes to extract CUDA kernel names from custom nodes
+- Loops over the GraphDef's nodes to extract CUDA kernel names from Fusion nodes
 - Extracts the byte string from GraphDef and creates a temporary `.so` file from it.
 - Calls `dlopen()` to load the `.so` file and dynamically link runtime APIs with it.
 - Calls `dlsym()` to get the address of the host function for each kernel name.
@@ -60,7 +60,7 @@ The runtime performs the following steps:
 - Calls `cuModuleGetFunction()` to get the GPU address of the CUDA kernel residing inside the CUDA module.
 
 **Execution phase**: <br/>
-- TensorFlow executes a custom op
+- TensorFlow executes a Fusion op
 - Custom op calls the corresponding host function with 4 arguments: (1) kernel pointer, (2) OpKernelContext pointer, (3) array of input tensor descriptors, (4) array of output tensor descriptors
 - Host function calls a runtime API for launching the CUDA kernel
 - The runtime API calls `cuLaunchKernel()` API

@@ -14,15 +14,17 @@ Status | Topic                                               | Doc
    OK  | How to bypass SM's private L1                       | [../src/bypass_L1/](../src/bypass_L1/)
    OK  | Atomicity                                           | [../src/atomic_read_modify_write/](../src/atomic_read_modify_write/)
    OK  | Default memory address alignment of cudaMalloc      | [./CUDA_cudaMalloc.md](./CUDA_cudaMalloc.md)
+   OK  | Pinned Memory                                       | [./CUDA_Pinned_Memory.md](./CUDA_Pinned_Memory.md)
    \-  | Shared memory bank conflicts                        | \-
    \-  | Static and dynamic shared memory usages             | \-
+   \-  | The usage of `__grid_constant__`                    | \-
    \-  | TMA                                                 | \-
-   \-  | Pinned Memory                                       | \-
 
 
 ## 2. Control Flow
 Status | Topic                                               | Doc
 -------|-----------------------------------------------------|--------------------------------------------------------------------------
+   OK  | CUDA Event                                          | [./CUDA_Event.md](./CUDA_Event.md)
    \-  | Memory barriers                                     | \-
    \-  | Scoped synchronizations (warp, cluster, CTA, CTAs)  | \-
 
