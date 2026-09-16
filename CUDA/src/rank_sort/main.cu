@@ -17,6 +17,9 @@ __global__ void rank_sort(const int* __restrict__ in, int* __restrict__ out, int
   #pragma unroll
   for (int j = 0; j < n; j++) {
     auto& v = in[j];
+
+    // Count how many elements sit before element i;
+    // rank must be unique
     if (v < val || (v == val && j < i)) {
       rank++;
     }
@@ -47,8 +50,8 @@ int main() {
   thrust::device_vector<int> dev_in_vec = host_vec;
   thrust::device_vector<int> dev_out_vec(n, 0);
 
-  int threads = 1024;
-  if (n <= 1024) {
+  int threads = 512;
+  if (n <= 512) {
     threads = n;
   }
   int blocks = (n + threads - 1) / threads;
