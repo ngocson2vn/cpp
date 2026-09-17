@@ -1,8 +1,8 @@
+#include <atomic>
+#include <functional>
 #include <random>
 #include <thread>
 #include <vector>
-#include <functional>
-#include <atomic>
 
 #include <immintrin.h>
 
@@ -20,8 +20,9 @@
     }                                                                          \
   } while (0)
 
-#define CHECK_KERNEL_LAUNCH()                                                  \
+#define CHECK_KERNEL_LAUNCH(...)                                               \
   do {                                                                         \
+    __VA_ARGS__;                                                               \
     auto lastError = cudaGetLastError();                                       \
     if (lastError != cudaSuccess) {                                            \
       auto errorName = cudaGetErrorName(lastError);                            \
@@ -45,18 +46,15 @@ __global__ void gelu(const float *__restrict__ input,
 }
 
 class Worker {
- public:
-  Worker() : id_(++Worker::counter_) {
+public:
+  Worker()
+      : id_(++Worker::counter_){
 
-  };
+        };
 
-  void schedule(std::function<void()> job) {
-    jobs_.push_back(job);
-  }
+  void schedule(std::function<void()> job) { jobs_.push_back(job); }
 
-  void start() {
-    worker_ = std::thread(&Worker::run, this);
-  }
+  void start() { worker_ = std::thread(&Worker::run, this); }
 
   void stop() {
     while (!jobs_.empty()) {
@@ -68,7 +66,7 @@ class Worker {
     worker_.join();
   }
 
- private:
+private:
   static std::atomic<int64_t> counter_;
   int64_t id_;
   bool keep_running_ = true;
@@ -77,9 +75,9 @@ class Worker {
 
   void run() {
     std::size_t done_jobs = 0;
-    while(keep_running_) {
+    while (keep_running_) {
       if (!jobs_.empty()) {
-        for (auto& job : jobs_) {
+        for (auto &job : jobs_) {
           job();
         }
 
@@ -131,8 +129,8 @@ int main(int argc, char **argv) {
   for (uint32_t idx = 0; idx < kNumLaunches; idx++) {
     k = idx / kWorkerJobs;
     workers[k].schedule([&, idx]() {
-      gelu<<<blocks, threads>>>(dev_inp_ptr, dev_out_ptrs[idx], length);
-      CHECK_KERNEL_LAUNCH();
+      CHECK_KERNEL_LAUNCH(
+          gelu<<<blocks, threads>>>(dev_inp_ptr, dev_out_ptrs[idx], length));
       // printf("Launched gelu %d\n", idx);
     });
   }

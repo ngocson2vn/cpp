@@ -1,9 +1,9 @@
+#include <atomic>
+#include <cassert>
+#include <functional>
 #include <random>
 #include <thread>
 #include <vector>
-#include <functional>
-#include <atomic>
-#include <cassert>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -20,8 +20,9 @@
     }                                                                          \
   } while (0)
 
-#define CHECK_KERNEL_LAUNCH()                                                  \
+#define CHECK_KERNEL_LAUNCH(...)                                               \
   do {                                                                         \
+    __VA_ARGS__;                                                               \
     auto lastError = cudaGetLastError();                                       \
     if (lastError != cudaSuccess) {                                            \
       auto errorName = cudaGetErrorName(lastError);                            \
@@ -31,16 +32,12 @@
     }                                                                          \
   } while (0);
 
-
-static std::vector<CUcontext>& getContexts() {
+static std::vector<CUcontext> &getContexts() {
   static std::vector<CUcontext> contexts;
   return contexts;
 }
 
-static CUcontext getContext(uint32_t idx) {
-  return getContexts()[idx];
-}
-
+static CUcontext getContext(uint32_t idx) { return getContexts()[idx]; }
 
 extern "C" {
 
@@ -53,14 +50,11 @@ __global__ void gelu(const float *__restrict__ input,
     output[tid] = res;
   }
 }
-
 }
 
 class ScopedContext {
- public:
-  ScopedContext(CUcontext ctx) : ctx_(ctx) {
-    cuCtxPushCurrent(ctx);
-  }
+public:
+  ScopedContext(CUcontext ctx) : ctx_(ctx) { cuCtxPushCurrent(ctx); }
 
   ~ScopedContext() {
     CUcontext pctx;
@@ -68,30 +62,27 @@ class ScopedContext {
     assert(pctx == ctx_ && "ctx mismatch!");
   }
 
- private:
+private:
   CUcontext ctx_;
 };
 
 class Worker {
- public:
-  Worker() : id_(++Worker::counter_) {
+public:
+  Worker()
+      : id_(++Worker::counter_){
 
-  };
+        };
 
-  void schedule(std::function<void()> job) {
-    jobs_.push_back(job);
-  }
+  void schedule(std::function<void()> job) { jobs_.push_back(job); }
 
-  void start() {
-    worker_ = std::thread(&Worker::run, this);
-  }
+  void start() { worker_ = std::thread(&Worker::run, this); }
 
   void stop() {
     keep_running_ = false;
     worker_.join();
   }
 
- private:
+private:
   static std::atomic<int64_t> counter_;
   int64_t id_;
   bool keep_running_ = true;
@@ -104,8 +95,8 @@ class Worker {
     printf("Worker %lu uses ctx %p\n", id_, ctx);
 
     std::size_t done_jobs = 0;
-    while(keep_running_) {
-      for (auto& job : jobs_) {
+    while (keep_running_) {
+      for (auto &job : jobs_) {
         job();
       }
 
@@ -118,7 +109,6 @@ class Worker {
 };
 
 std::atomic<int64_t> Worker::counter_(-1);
-
 
 int main(int argc, char **argv) {
   //===============================================================================
@@ -139,7 +129,7 @@ int main(int argc, char **argv) {
 
   // Create a pool of contexts for worker threads
   constexpr uint32_t kNumWorkers = 4;
-  auto& contexts = getContexts();
+  auto &contexts = getContexts();
   for (int i = 0; i < kNumWorkers; i++) {
     CUcontext ctx;
 
@@ -148,13 +138,13 @@ int main(int argc, char **argv) {
     cuCtxCreate(&ctx, nullptr, 0, device);
 
     // IMMEDIATELY POP the new custom context off the stack.
-    // This restores the primary context as the active context for the main thread.
+    // This restores the primary context as the active context for the main
+    // thread.
     CUcontext pctx;
     cuCtxPopCurrent(&pctx);
 
     contexts.push_back(ctx);
   }
-
 
   //===============================================================================
   // Body
@@ -186,16 +176,14 @@ int main(int argc, char **argv) {
     dev_out_ptrs[i] = dev_out_ptr;
   }
 
-
   constexpr uint32_t kWorkerJobs = kNumLaunches / kNumWorkers;
   std::vector<Worker> workers(kNumWorkers);
   uint32_t k = 0;
   for (uint32_t idx = 0; idx < kNumLaunches; idx++) {
     k = idx / kWorkerJobs;
     workers[k].schedule([&, idx]() {
-      gelu<<<blocks, threads>>>(dev_inp_ptr, dev_out_ptrs[idx], length);
-      CHECK_KERNEL_LAUNCH();
-      // printf("Launched gelu kernel %d\n", idx);
+      CHECK_KERNEL_LAUNCH(
+          gelu<<<blocks, threads>>>(dev_inp_ptr, dev_out_ptrs[idx], length));
     });
   }
 

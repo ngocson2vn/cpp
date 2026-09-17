@@ -20,6 +20,7 @@ thrust::host_vector<float> cpu_kernel(const float* __restrict__ in, const float*
   return out;
 }
 
+
 template <int TILE_SIZE, int FILTER_SIZE>
 __global__ void gpu_kernel_v1(const float* __restrict__ in, const float* __restrict__ weights, float* __restrict__ out, const int n) {
   int tile_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -41,6 +42,14 @@ __global__ void gpu_kernel_v1(const float* __restrict__ in, const float* __restr
   }
 }
 
+/*
+Reorder loops
+  - Swap the innermost loop with the outermost loop
+  - weights[k] will be loaded into a register 
+  - weights[k] will be re-used TILE_SIZE times
+
+NOTE: Pay attention to the index of acc
+*/
 template <int TILE_SIZE, int FILTER_SIZE>
 __global__ void gpu_kernel_v2(const float* __restrict__ in, const float* __restrict__ weights, float* __restrict__ out, const int n) {
   int tile_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -76,7 +85,7 @@ int main() {
   std::uniform_real_distribution<float> dist(0.0, 0.1);
 
   constexpr int N = 1024 * 1024 * 16;
-  constexpr int TILE_SIZE = 4;
+  constexpr int TILE_SIZE = 32;
   constexpr int FILTER_SIZE = 32;
   constexpr float eps = 1e-2;
   thrust::host_vector<float> host_vec1(N, 0);
@@ -89,6 +98,7 @@ int main() {
     e = dist(gen);
   }
 
+  printf("Executing cpu_kernel\n");
   thrust::host_vector<float> cpu_out_vec = cpu_kernel<FILTER_SIZE>(host_vec1.data(), host_vec2.data(), N);
 
   int total_tiles = (N + TILE_SIZE - 1) / TILE_SIZE;
@@ -103,6 +113,8 @@ int main() {
   for (int i = 0; i < 4; i++) {
     printf("\n");
     printf("========================================================\n");
+
+    float t1 = 0;
     printf("Launching gpu_kernel_v1\n");
     {
       thrust::device_vector<float> dev_in_vec1 = host_vec1;
@@ -119,9 +131,8 @@ int main() {
       cudaEventRecord(e1, 0);
       cudaDeviceSynchronize();
 
-      float elapsed_ms;
-      cudaEventElapsedTime(&elapsed_ms, e0, e1);
-      printf("Kernel time v1: %f ms\n", elapsed_ms);
+      cudaEventElapsedTime(&t1, e0, e1);
+      printf("Kernel time v1: %f ms\n", t1);
 
       thrust::host_vector<float> gpu_out_vec = dev_out_vec;
       for (int i = 0; i < N; i++) {
@@ -137,6 +148,7 @@ int main() {
 
     printf("\n");
 
+    float t2 = 0;
     printf("Launching gpu_kernel_v2\n");
     {
       thrust::device_vector<float> dev_in_vec1 = host_vec1;
@@ -153,9 +165,8 @@ int main() {
       cudaEventRecord(e1, 0);
       cudaDeviceSynchronize();
 
-      float elapsed_ms;
-      cudaEventElapsedTime(&elapsed_ms, e0, e1);
-      printf("Kernel time v2: %f ms\n", elapsed_ms);
+      cudaEventElapsedTime(&t2, e0, e1);
+      printf("Kernel time v2: %f ms\n", t2);
 
       thrust::host_vector<float> gpu_out_vec = dev_out_vec;
       for (int i = 0; i < N; i++) {
@@ -169,6 +180,8 @@ int main() {
       printf("gpu_kernel_v2 PASSED\n");
     }
 
+    printf("\n");
+    printf("t1 - t2 = %f ms\n", t1 - t2);
     printf("========================================================\n");
   }
 }
