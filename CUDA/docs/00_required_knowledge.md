@@ -34,19 +34,36 @@ Status | Topic                                               | Doc
 -------|-----------------------------------------------------|--------------------------------------------------------------------------
    \-  | MMA                                                 | \-
 
+
 ## 4. GEMM
 Status | Topic                                               | Doc
 -------|-----------------------------------------------------|--------------------------------------------------------------------------
-   \-  | Persistent GEMM                                     | \-
+   OK  | Persistent GEMM                                     | [./Persistent_GEMM.md](./Persistent_GEMM.md)
 
 
 ## 5. Inline PTX
-- How to execute a PTX instruction?
+Status | Topic                                               | Doc
+-------|-----------------------------------------------------|--------------------------------------------------------------------------
+   OK  | How to apply an Inline PTX instruction              | [../src/vectorized_load_store/](../src/vectorized_load_store/)
+
 
 ## 6. Inspect a CUBIN file
+Using `cuobjdump`:
+```bash
+# List ELF files
+cuobjdump -lelf main
+
+# Dump SASS
+cuobjdump -sass main
+```
 
 ## 7. Builtins
-- Sort on GPU
+Status | Topic                                               | Doc
+-------|-----------------------------------------------------|--------------------------------------------------------------------------
+   OK  | Sort on GPU using `thrust::sort()`                  | [../src/thrust_sort/](../src/thrust_sort/)
+   OK  | Manually implement rank sort                        | [../src/rank_sort/](../src/rank_sort/)
 
 ## 8. CUDA APIs
-- CUDA APIs
+Status | Topic                                               | Doc
+-------|-----------------------------------------------------|--------------------------------------------------------------------------
+   OK  | How to apply an Inline PTX instruction              | [../src/vectorized_load_store/](../src/vectorized_load_store/)

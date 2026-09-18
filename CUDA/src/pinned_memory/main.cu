@@ -231,11 +231,21 @@ int main(int argc, char **argv) {
     printf("NOW: B has %d elements\n", B.size());
   }
 
-  printf("\n");
-  //=====================================================================================
-
   const std::size_t bytes_a = pM*pK * sizeof(DataType);
   const std::size_t bytes_b = pN*pK * sizeof(DataType);
+
+  // Allocate pinned memory buffers
+  void* pinnedA;
+  void* pinnedB;
+  cudaMallocHost(&pinnedA, bytes_a);
+  cudaMallocHost(&pinnedB, bytes_b);
+
+  // Copy A and B to pinned memory locations;
+  memcpy(pinnedA, A.data(), bytes_a);
+  memcpy(pinnedB, B.data(), bytes_b);
+
+  printf("\n");
+  //=====================================================================================
 
   // Allocate input buffers
   DataType *dev_a_ptr = nullptr;
@@ -276,8 +286,8 @@ int main(int argc, char **argv) {
   Timer timer;
 
   // Copy inputs from CPU to GPU
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(dev_a_ptr, A.data(), bytes_a, cudaMemcpyHostToDevice, stream));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(dev_b_ptr, B.data(), bytes_b, cudaMemcpyHostToDevice, stream));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(dev_a_ptr, pinnedA, bytes_a, cudaMemcpyHostToDevice, stream));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(dev_b_ptr, pinnedB, bytes_b, cudaMemcpyHostToDevice, stream));
   persistent_gemm_kernel<TILE_SIZE><<<blocks, threads, 0, stream>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr, M, N, pM, pN, pK);
   // CHECK_CUDA_ERROR(cudaGetLastError());
   CHECK_CUDA_ERROR(cudaEventRecord(e1, stream));
@@ -308,4 +318,6 @@ int main(int argc, char **argv) {
   cudaFree(dev_a_ptr);
   cudaFree(dev_b_ptr);
   cudaFree(dev_c_ptr);
+  cudaFreeHost(pinnedA);
+  cudaFreeHost(pinnedB);
 }

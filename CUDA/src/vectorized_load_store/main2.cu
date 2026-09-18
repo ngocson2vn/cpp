@@ -24,104 +24,43 @@
     }                                                                          \
   } while (0)
 
-extern "C" {
 
-__device__ void ld_v4_f32(float& v0, float& v1, float& v2, float& v3, const float* ptr) {
-  asm volatile(
-    "ld.global.nc.v4.f32 {%0, %1, %2, %3}, [%4];"
-    : "=f"(v0), "=f"(v1), "=f"(v2), "=f"(v3)
-    : "l"(ptr)
-  );
-}
-
-__device__ void st_v4_f32(float* ptr, float v0, float v1, float v2, float v3) {
-  asm volatile(
-    "st.global.v4.f32 [%0], {%1, %2, %3, %4};"
-    :
-    : "l"(ptr), "f"(v0), "f"(v1), "f"(v2), "f"(v3)
-  );
-}
-
+template <int TILE_SIZE>
 __global__ void add_vectors(const float *__restrict__ a,
-                            const float *__restrict__ b, float *__restrict__ c,
-                            int blockSize, int totalElems) {
-  auto blockIndex = blockIdx.x;
-  auto numThreads = blockDim.x;
-  auto numElems = (blockSize + numThreads - 1) / numThreads;
-  auto tid = threadIdx.x;
+                            const float *__restrict__ b,
+                            float *__restrict__ c, const int N) {
+  const int TOTAL_TILES =(N + TILE_SIZE - 1) / TILE_SIZE;
+  const int TOTAL_THREADS = gridDim.x * blockDim.x;
+  int tile_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-  //================================================
-  // Normal case
-  //================================================
-  // numThreads = 32
-  //  blockSize = 128
-  //   numElems = 4
-  // 
-  //  tid=0  |  tid=1  |  tid=2
-  // 0 1 2 3 | 4 5 6 7 | 8 9 10 11
+  while (tile_idx < TOTAL_TILES) {
+    int start_idx = tile_idx * TILE_SIZE;
+    for (int idx = start_idx; (idx - start_idx < TILE_SIZE) && (idx < N); idx++) {
+      c[idx] = a[idx] + b[idx];
+    }
 
-  //================================================
-  // Abnormal case
-  //================================================
-  // numThreads = 64
-  //  blockSize = 32
-  //   numElems = 1
-  // 
-  //  tid=0  |  tid=1  |  tid=2  |  tid=3
-  //    0    |    1    |    2    |    3
-
-  auto blockLowerBound = blockIndex * blockSize;
-  auto blockUpperBound = blockLowerBound + blockSize;
-
-  auto lowerBound = blockLowerBound + tid * numElems;
-  auto upperBound = min(lowerBound + numElems, blockUpperBound);
-
-  // Ensure that `upperBound` is not greater than `totalElems`
-  upperBound = min(upperBound, totalElems);
-
-  int idx = lowerBound;
-  float a0, a1, a2, a3;
-  float b0, b1, b2, b3;
-
-  #pragma unroll 1
-  for (; idx + 4 < upperBound; idx += 4) {
-    ld_v4_f32(a0, a1, a2, a3, &a[idx]);
-    ld_v4_f32(b0, b1, b2, b3, &b[idx]);
-    st_v4_f32(&c[idx], a0 + b0, a1 + b1, a2 + b2, a3 + b3);
-  }
-
-  #pragma unroll 1
-  for (; idx < upperBound; idx++) {
-    c[idx] = a[idx] + b[idx];
+    tile_idx += TOTAL_THREADS;
   }
 }
 
-}
 
 int main(int argc, char **argv) {
   using DataType = float;
-  constexpr int kNumWarps = 1;
-  constexpr int kNumThreads = kNumWarps * WARP_SIZE;
 
-  int totalElems = 1024000;
+  int N = 1024 * 1024 * 128 + 1;
   if (argc > 1) {
-    totalElems = std::atoi(argv[1]);
+    N = std::atoi(argv[1]);
   }
 
-  const int kBlockX = totalElems;
-  const int threadElems = (kBlockX + kNumThreads - 1) / kNumThreads;
-  printf("threadElems = %d\n", threadElems);
-  assert(threadElems % 4 == 0 && "threadElems is not divisible by 4");
-
-  const std::size_t kNumBytes = totalElems * sizeof(DataType);
+  const std::size_t kNumBytes = N * sizeof(DataType);
 
   printf("KERNEL_VERSION = %d\n", KERNEL_VERSION);
 
-  auto a = std::vector<DataType>(totalElems, 0);
-  auto b = std::vector<DataType>(totalElems, 0);
-  auto gpu_res = std::vector<DataType>(totalElems, 0);
+  auto a = std::vector<DataType>(N, 0);
+  auto b = std::vector<DataType>(N, 0);
+  auto gpu_res = std::vector<DataType>(N, 0);
 
-  for (int i = 0; i < totalElems; i++) {
+  for (int i = 0; i < N; i++) {
     a[i] = DataType(i);
     b[i] = DataType(i);
   }
@@ -139,16 +78,44 @@ int main(int argc, char **argv) {
   CHECK_CUDA_ERROR(
       cudaMemcpy(dev_b_ptr, b.data(), kNumBytes, cudaMemcpyHostToDevice));
 
-  dim3 gridSize(1, 1, 1);
-  dim3 blockSize(kNumThreads, 1, 1);
 
+  // Each thread processes TILE_SIZE elements
+  constexpr int TILE_SIZE = 8;
+  static_assert(TILE_SIZE % 4 == 0 && "TILE_SIZE must be equal to 4");
 
-  Timer timer;
-  add_vectors<<<gridSize, blockSize>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr,
-                                       kBlockX, totalElems);
-  CHECK_CUDA_ERROR(cudaGetLastError());
+  const int totalTiles = (N + TILE_SIZE - 1) / TILE_SIZE;
+  printf("N = %d\n", N);
+  printf("totalTiles = %d\n", totalTiles);
+
+  // Compute optimal blocks and threads
+  int blocks = 1;
+  int threads = 256;
+  auto kernel_fn = add_vectors<TILE_SIZE>;
+  cudaOccupancyMaxPotentialBlockSize(&blocks, &threads, kernel_fn, 0, 0);
+  printf("[PRE] blocks = %d threads = %d\n", blocks, threads);
+
+  if (totalTiles < threads) {
+    blocks = 1;
+    threads = totalTiles;
+  } else if (totalTiles < blocks * threads) {
+    blocks = (totalTiles + threads - 1) / threads;
+  } else {
+    // Using the heuristic blocks and threads above
+  }
+  printf("[OPT] blocks = %d threads = %d\n", blocks, threads);
+
+  // Timer timer;
+  cudaEvent_t e0, e1;
+  cudaEventCreate(&e0);
+  cudaEventCreate(&e1);
+  cudaEventRecord(e0, 0);
+  kernel_fn<<<blocks, threads, 0, 0>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr, N);
+  cudaEventRecord(e1, 0);
   CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-  printf("Kernel time: %lu us\n", timer.elapsed_time_us());
+
+  float elapsed_time_ms;
+  cudaEventElapsedTime(&elapsed_time_ms, e0, e1);
+  printf("Kernel time: %f ms\n", elapsed_time_ms);
 
   CHECK_CUDA_ERROR(
       cudaMemcpy(gpu_res.data(), dev_c_ptr, kNumBytes, cudaMemcpyDeviceToHost));
@@ -157,13 +124,13 @@ int main(int argc, char **argv) {
   cudaFree(dev_b_ptr);
   cudaFree(dev_c_ptr);
 
-  auto cpu_res = std::vector<DataType>(totalElems, 0);
-  for (int i = 0; i < totalElems; i++) {
+  auto cpu_res = std::vector<DataType>(N, 0);
+  for (int i = 0; i < N; i++) {
     cpu_res[i] = a[i] + b[i];
   }
 
   bool ok = true;
-  for (int i = 0; i < totalElems; i++) {
+  for (int i = 0; i < N; i++) {
     if (gpu_res[i] != cpu_res[i]) {
       ok = false;
       break;

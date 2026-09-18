@@ -6,10 +6,16 @@ public:
       : t0(std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::system_clock::now().time_since_epoch())) {}
 
-  uint64_t elapsed_time_us() {
+  float elapsed_time_ms() {
     auto t1 = std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::system_clock::now().time_since_epoch());
-    return (t1 - t0).count() / 1000;
+    return (t1 - t0).count() / 1e6;
+  }
+
+  float elapsed_time_us() {
+    auto t1 = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::system_clock::now().time_since_epoch());
+    return (t1 - t0).count() / 1e3;
   }
 
   uint64_t elapsed_time_ns() {
