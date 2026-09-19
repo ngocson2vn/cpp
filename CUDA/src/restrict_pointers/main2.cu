@@ -1,115 +1,128 @@
 #include <cstdio>
-#include <vector>
-
 #include <cstdlib>
+#include <vector>
+#include <random>
+
 #include <cuda_runtime.h>
 
-#include "timer.h"
+#include "persistent_gemm.h"
 
 #define KERNEL_VERSION 2
-#define TOSTR(x) #x
-#define STRINGIFY(x) TOSTR(x)
-
-#define CHECK_CUDA_ERROR(apiCall)                                              \
-  do {                                                                         \
-    cudaError_t error = apiCall;                                               \
-    if (error != cudaSuccess) {                                                \
-      auto errorName = cudaGetErrorName(error);                                \
-      auto errorString = cudaGetErrorString(error);                            \
-      fprintf(stderr, "%s:%d %s: %s\n", __FILE__, __LINE__, errorName,         \
-              errorString);                                                    \
-      return EXIT_FAILURE;                                                     \
-    }                                                                          \
-  } while (0)
 
 extern "C" {
 
-__global__ void add_mul_vectors(const float *__restrict__ a,
-                                const float *__restrict__ b,
-                                float *__restrict__ c, int totalElems) {
-  auto numThreads = blockDim.x;
-  auto numElems = (totalElems + numThreads - 1) / numThreads;
-  auto tid = threadIdx.x;
+// Each block computes one row of matrix c
+__global__ void gemm_v2(const float* __restrict__ a,
+                        const float* __restrict__ b,
+                        float* __restrict__ c,
+                        const uint32_t M,
+                        const uint32_t N,
+                        const uint32_t K) {
+  uint32_t const TOTAL_THREADS = gridDim.x * blockDim.x;
+  uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  uint32_t row = 0;
+  uint32_t col = 0;
+  float acc = 0;
 
-  // numElems = 4
-  //  tid=0  |  tid=1  |  tid=2
-  // 0 1 2 3 | 4 5 6 7 | 8 9 10 11
+  #pragma unroll 1
+  while (idx < M * N) {
+    row = idx / N;
+    col = idx % N;
+    acc = 0;
 
-  // Ensure that `maxIdx` is not greater than `totalElems`
-  auto maxIdx = min((tid + 1) * numElems, totalElems);
-  for (int idx = tid * numElems; idx < maxIdx; idx++) {
-    c[idx] = a[idx] + b[idx];
-  }
+    #pragma unroll 1
+    for (uint32_t k = 0; k < K; k++) {
+      acc += a[row * K + k] * b[k * N + col];
+    }
+    c[idx] = acc;
 
-  for (int idx = tid * numElems; idx < maxIdx; idx++) {
-    c[idx] = c[idx] * a[idx];
+    idx += TOTAL_THREADS;
   }
 }
+
 }
 
 int main(int argc, char **argv) {
-  using DataType = float;
-  std::size_t totalElems = 1024000;
+  const uint32_t M = 1024;
+  const uint32_t N = 512;
+  const uint32_t K = 1024 * 32;
 
-  if (argc > 1) {
-    totalElems = std::atoi(argv[1]);
-  }
-
-  const std::size_t kNumBytes = totalElems * sizeof(DataType);
+  const std::size_t aBytes = M * K * sizeof(float);
+  const std::size_t bBytes = K * N * sizeof(float);
+  const std::size_t cBytes = M * N * sizeof(float);
 
   printf("KERNEL_VERSION = %d\n", KERNEL_VERSION);
 
-  auto a = std::vector<DataType>(totalElems, 0);
-  auto b = std::vector<DataType>(totalElems, 0);
-  auto gpu_res = std::vector<DataType>(totalElems, 0);
+  auto a = std::vector<float>(M*K, 0);
+  auto b = std::vector<float>(K*N, 0);
+  auto c = std::vector<float>(M*N, 0);
+  auto gpu_res = std::vector<float>(M*N, 0);
 
-  for (int i = 0; i < totalElems; i++) {
-    a[i] = DataType(i);
-    b[i] = DataType(i);
-  }
+  std::random_device rd;  // Will be used to obtain a seed for the random number engine
+  std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
+  std::uniform_real_distribution<float> dist(0, 0.1);
 
-  DataType *dev_a_ptr = nullptr;
-  DataType *dev_b_ptr = nullptr;
-  DataType *dev_c_ptr = nullptr;
-  CHECK_CUDA_ERROR(cudaMalloc(&dev_a_ptr, kNumBytes));
-  CHECK_CUDA_ERROR(cudaMalloc(&dev_b_ptr, kNumBytes));
-  CHECK_CUDA_ERROR(cudaMalloc(&dev_c_ptr, kNumBytes));
+  for (int i = 0; i < M*K; i++) a[i] = dist(gen);
+  for (int i = 0; i < K*N; i++) b[i] = dist(gen);
+
+  // Baseline GEMM
+  auto base_res = persistent_gemm(a, b, M, N, K);
+
+  float *dev_a_ptr = nullptr;
+  float *dev_b_ptr = nullptr;
+  float *dev_c_ptr = nullptr;
+  CHECK_CUDA_ERROR(cudaMalloc(&dev_a_ptr, aBytes));
+  CHECK_CUDA_ERROR(cudaMalloc(&dev_b_ptr, bBytes));
+  CHECK_CUDA_ERROR(cudaMalloc(&dev_c_ptr, cBytes));
 
   // Copy inputs from CPU to GPU
   CHECK_CUDA_ERROR(
-      cudaMemcpy(dev_a_ptr, a.data(), kNumBytes, cudaMemcpyHostToDevice));
+      cudaMemcpy(dev_a_ptr, a.data(), aBytes, cudaMemcpyHostToDevice));
   CHECK_CUDA_ERROR(
-      cudaMemcpy(dev_b_ptr, b.data(), kNumBytes, cudaMemcpyHostToDevice));
+      cudaMemcpy(dev_b_ptr, b.data(), bBytes, cudaMemcpyHostToDevice));
 
-  dim3 gridSize(1, 1, 1);
-  dim3 blockSize(32, 1, 1);
+  int blocks = 1;
+  int threads = 256;
+  cudaOccupancyMaxPotentialBlockSize(&blocks, &threads, gemm_v2, 0, 0);
+  printf("[PRE] blocks = %d threads = %d\n", blocks, threads);
 
-  Timer timer;
-  add_mul_vectors<<<gridSize, blockSize>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr,
-                                           totalElems);
-  CHECK_CUDA_ERROR(cudaGetLastError());
-  CHECK_CUDA_ERROR(cudaDeviceSynchronize());
-  printf("Kernel time: %lu ns\n", timer.elapsed_time());
-
-  CHECK_CUDA_ERROR(
-      cudaMemcpy(gpu_res.data(), dev_c_ptr, kNumBytes, cudaMemcpyDeviceToHost));
-
-  cudaFree(dev_a_ptr);
-  cudaFree(dev_b_ptr);
-  cudaFree(dev_c_ptr);
-
-  auto cpu_res = std::vector<DataType>(totalElems, 0);
-  for (int i = 0; i < totalElems; i++) {
-    cpu_res[i] = a[i] * (a[i] + b[i]);
+  // Optimize blocks and threads
+  if (M*N < threads) {
+    blocks = 1;
+    threads = M*N;
+  } else if (M*N < blocks * threads) {
+    blocks = (M*N + threads - 1) / threads;
   }
+  printf("[OPT] blocks = %d threads = %d\n", blocks, threads);
+
+  cudaEvent_t e0, e1;
+  cudaEventCreate(&e0);
+  cudaEventCreate(&e1);
+
+  cudaEventRecord(e0, 0);
+  gemm_v2<<<blocks, threads, 0, 0>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr, M, N, K);
+  cudaEventRecord(e1, 0);
+  CHECK_CUDA_ERROR(cudaDeviceSynchronize());
+
+  float elapsed_time_ms;
+  cudaEventElapsedTime(&elapsed_time_ms, e0, e1);
+  printf("Kernel time: %f ms\n", elapsed_time_ms);
+
+  CHECK_CUDA_ERROR(
+      cudaMemcpy(gpu_res.data(), dev_c_ptr, cBytes, cudaMemcpyDeviceToHost));
 
   bool ok = true;
-  for (int i = 0; i < totalElems; i++) {
-    if (gpu_res[i] != cpu_res[i]) {
+  for (int i = 0; i < M*N; i++) {
+    if (std::abs(gpu_res[i] - base_res[i]) > 1e-3) {
+      printf("i = %d: GPU value %f != %f CPU value\n", i, gpu_res[i], base_res[i]);
       ok = false;
       break;
     }
   }
 
   printf("%s\n", (ok ? "PASSED" : "FAILED"));
+
+  cudaFree(dev_a_ptr);
+  cudaFree(dev_b_ptr);
+  cudaFree(dev_c_ptr);
 }

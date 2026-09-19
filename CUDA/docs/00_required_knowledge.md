@@ -47,7 +47,21 @@ Status | Topic                                               | Doc
    OK  | How to apply an Inline PTX instruction              | [../src/vectorized_load_store/](../src/vectorized_load_store/)
 
 
-## 6. Inspect a CUBIN file
+## 6. Sorting
+Status | Topic                                               | Doc
+-------|-----------------------------------------------------|--------------------------------------------------------------------------
+   OK  | Sort on GPU using `thrust::sort()`                  | [../src/thrust_sort/](../src/thrust_sort/)
+   OK  | Manually implement rank sort                        | [../src/rank_sort/](../src/rank_sort/)
+   \-  | Implement bitonic sort                              | \-
+
+
+## 7. Intrinsics and Builtins
+Status | Topic                                               | Doc
+-------|-----------------------------------------------------|--------------------------------------------------------------------------
+   OK  | max and min functions                               | \-
+
+
+## 8. Inspect a CUBIN file
 Using `cuobjdump`:
 ```bash
 # List ELF files
@@ -57,13 +71,8 @@ cuobjdump -lelf main
 cuobjdump -sass main
 ```
 
-## 7. Builtins
-Status | Topic                                               | Doc
--------|-----------------------------------------------------|--------------------------------------------------------------------------
-   OK  | Sort on GPU using `thrust::sort()`                  | [../src/thrust_sort/](../src/thrust_sort/)
-   OK  | Manually implement rank sort                        | [../src/rank_sort/](../src/rank_sort/)
 
-## 8. CUDA APIs
+## 9. CUDA APIs
 Status | Topic                                               | Doc
 -------|-----------------------------------------------------|--------------------------------------------------------------------------
    OK  | How to apply an Inline PTX instruction              | [../src/vectorized_load_store/](../src/vectorized_load_store/)

@@ -10,85 +10,80 @@
 .target sm_120a
 .address_size 64
 
-	// .globl	gemm_v1
+	// .globl	gemm_v3
 // _ZZ22persistent_gemm_kernelIfLj32EEvPKT_S2_PS0_jjjjjE2sA has been demoted
 // _ZZ22persistent_gemm_kernelIfLj32EEvPKT_S2_PS0_jjjjjE2sB has been demoted
 
-.visible .entry gemm_v1(
-	.param .u64 .ptr .align 1 gemm_v1_param_0,
-	.param .u64 .ptr .align 1 gemm_v1_param_1,
-	.param .u64 .ptr .align 1 gemm_v1_param_2,
-	.param .u32 gemm_v1_param_3,
-	.param .u32 gemm_v1_param_4,
-	.param .u32 gemm_v1_param_5
+.visible .entry gemm_v3(
+	.param .u64 .ptr .align 1 gemm_v3_param_0,
+	.param .u64 .ptr .align 1 gemm_v3_param_1,
+	.param .u64 .ptr .align 1 gemm_v3_param_2,
+	.param .u32 gemm_v3_param_3,
+	.param .u32 gemm_v3_param_4,
+	.param .u32 gemm_v3_param_5
 )
 {
-	.reg .pred 	%p<6>;
+	.reg .pred 	%p<5>;
 	.reg .b32 	%r<37>;
-	.reg .b64 	%rd<15>;
+	.reg .b64 	%rd<11>;
 
-	ld.param.b64 	%rd4, [gemm_v1_param_0];
-	ld.param.b64 	%rd5, [gemm_v1_param_1];
-	ld.param.b64 	%rd6, [gemm_v1_param_2];
-	ld.param.b32 	%r19, [gemm_v1_param_3];
-	ld.param.b32 	%r17, [gemm_v1_param_4];
-	ld.param.b32 	%r18, [gemm_v1_param_5];
-	cvta.to.global.u64 	%rd1, %rd6;
-	mov.u32 	%r20, %nctaid.x;
-	mov.u32 	%r21, %ntid.x;
-	mul.lo.s32 	%r1, %r20, %r21;
-	mov.u32 	%r22, %ctaid.x;
-	mov.u32 	%r23, %tid.x;
-	mad.lo.s32 	%r32, %r22, %r21, %r23;
+	ld.param.b64 	%rd2, [gemm_v3_param_0];
+	ld.param.b64 	%rd3, [gemm_v3_param_1];
+	ld.param.b64 	%rd4, [gemm_v3_param_2];
+	ld.param.b32 	%r19, [gemm_v3_param_3];
+	ld.param.b32 	%r17, [gemm_v3_param_4];
+	ld.param.b32 	%r18, [gemm_v3_param_5];
+	mov.u32 	%r1, %ntid.x;
+	mov.u32 	%r20, %ctaid.x;
+	mov.u32 	%r21, %tid.x;
+	mad.lo.s32 	%r32, %r20, %r1, %r21;
 	mul.lo.s32 	%r3, %r17, %r19;
 	setp.ge.u32 	%p1, %r32, %r3;
 	@%p1 bra 	$L__BB0_6;
-	setp.eq.s32 	%p2, %r18, 0;
-	@%p2 bra 	$L__BB0_7;
 	neg.s32 	%r4, %r18;
-	cvta.to.global.u64 	%rd2, %rd4;
-	cvta.to.global.u64 	%rd3, %rd5;
-$L__BB0_3:
+	mov.u32 	%r22, %nctaid.x;
+	mul.lo.s32 	%r5, %r22, %r1;
+	cvta.to.global.u64 	%rd1, %rd4;
+$L__BB0_2:
 	.pragma "nounroll";
+	setp.eq.s32 	%p2, %r18, 0;
+	mov.b32 	%r36, 0f00000000;
+	@%p2 bra 	$L__BB0_5;
 	div.u32 	%r26, %r32, %r17;
+	mul.lo.s32 	%r7, %r26, %r18;
 	mul.lo.s32 	%r27, %r26, %r17;
 	sub.s32 	%r8, %r32, %r27;
-	mul.lo.s32 	%r9, %r26, %r18;
 	mov.b32 	%r36, 0f00000000;
-	mov.b32 	%r35, 0;
-	mov.b32 	%r34, %r4;
+	mov.b32 	%r34, 0;
+	mov.b32 	%r33, %r4;
 $L__BB0_4:
 	.pragma "nounroll";
-	add.s32 	%r28, %r35, %r9;
-	mul.wide.u32 	%rd7, %r28, 4;
-	add.s64 	%rd8, %rd2, %rd7;
-	ld.global.b32 	%r29, [%rd8];
-	mad.lo.s32 	%r30, %r35, %r17, %r8;
-	mul.wide.u32 	%rd9, %r30, 4;
-	add.s64 	%rd10, %rd3, %rd9;
-	ld.global.b32 	%r31, [%rd10];
-	fma.rn.f32 	%r36, %r29, %r31, %r36;
-	add.s32 	%r35, %r35, 1;
+	add.s32 	%r30, %r34, %r7;
+	mul.wide.u32 	%rd7, %r30, 4;
+	add.s64 	%rd5, %rd2, %rd7;
+	// begin inline asm
+	ld.global.nc.f32 %r28, [%rd5];
+	// end inline asm
+	mad.lo.s32 	%r31, %r34, %r17, %r8;
+	mul.wide.u32 	%rd8, %r31, 4;
+	add.s64 	%rd6, %rd3, %rd8;
+	// begin inline asm
+	ld.global.nc.f32 %r29, [%rd6];
+	// end inline asm
+	fma.rn.f32 	%r36, %r28, %r29, %r36;
 	add.s32 	%r34, %r34, 1;
-	setp.ne.s32 	%p3, %r34, 0;
+	add.s32 	%r33, %r33, 1;
+	setp.ne.s32 	%p3, %r33, 0;
 	@%p3 bra 	$L__BB0_4;
-	mul.wide.u32 	%rd11, %r32, 4;
-	add.s64 	%rd12, %rd1, %rd11;
-	st.global.b32 	[%rd12], %r36;
-	add.s32 	%r32, %r32, %r1;
+$L__BB0_5:
+	mul.wide.u32 	%rd9, %r32, 4;
+	add.s64 	%rd10, %rd1, %rd9;
+	st.global.b32 	[%rd10], %r36;
+	add.s32 	%r32, %r32, %r5;
 	setp.lt.u32 	%p4, %r32, %r3;
-	@%p4 bra 	$L__BB0_3;
+	@%p4 bra 	$L__BB0_2;
 $L__BB0_6:
 	ret;
-$L__BB0_7:
-	.pragma "nounroll";
-	mul.wide.u32 	%rd13, %r32, 4;
-	add.s64 	%rd14, %rd1, %rd13;
-	st.global.b32 	[%rd14], 0;
-	add.s32 	%r32, %r32, %r1;
-	setp.lt.u32 	%p5, %r32, %r3;
-	@%p5 bra 	$L__BB0_7;
-	bra.uni 	$L__BB0_6;
 
 }
 	// .globl	_Z22persistent_gemm_kernelIfLj32EEvPKT_S2_PS0_jjjjj
