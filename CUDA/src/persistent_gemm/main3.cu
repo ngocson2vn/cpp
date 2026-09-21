@@ -8,7 +8,7 @@
 
 #include "timer.h"
 
-#define KERNEL_VERSION 2
+#define KERNEL_VERSION 3
 #define TOSTR(x) #x
 #define STRINGIFY(x) TOSTR(x)
 
@@ -59,71 +59,68 @@ __device__ void sync_cta() {
 }
 
 
-// Persistent GEMM
-template <uint32_t TILE_SIZE>
+// Persistent GEMM and dynamic shared memory
 __global__ void persistent_gemm_kernel(const float *__restrict__ A,
                             const float *__restrict__ B, 
                             float *__restrict__ C,
                             const uint32_t OUT_ROWS, const uint32_t OUT_COLS,
-                            const uint32_t M, const uint32_t N, const uint32_t K) {
+                            const uint32_t M, const uint32_t N, const uint32_t K, 
+                            const uint32_t TILE_SIZE) {
   assert(TILE_SIZE * TILE_SIZE == blockDim.x && "The number of threads in a CTA must be equal to the number of elements in a tile");
-  
+
   // Shared memory buffers for a_tile and b_tile;
-  __shared__ float sA[TILE_SIZE * TILE_SIZE];
-  __shared__ float sB[TILE_SIZE * TILE_SIZE];
+  extern __shared__ float global_smem[];
 
-  int m_tile_count = (M + TILE_SIZE - 1) / TILE_SIZE;
-  int n_tile_count = (N + TILE_SIZE - 1) / TILE_SIZE;
-  int k_tile_count = (K + TILE_SIZE - 1) / TILE_SIZE;
+  auto sA = &global_smem[0];
+  auto sB = &global_smem[TILE_SIZE * TILE_SIZE];
 
-  // Total output tiles
-  int total_tiles = m_tile_count * n_tile_count;
+  uint32_t m_tile_count = (M + TILE_SIZE - 1) / TILE_SIZE;
+  uint32_t n_tile_count = (N + TILE_SIZE - 1) / TILE_SIZE;
+  uint32_t k_tile_count = (K + TILE_SIZE - 1) / TILE_SIZE;
+  uint32_t total_tiles = m_tile_count * n_tile_count;
 
-  // Each block is responsible for 1 output tile
-  int tile_idx = blockIdx.x;
+  // The number of blocks
+  uint32_t blocks = gridDim.x;
 
-  // tile_idx must be strided by total blocks
-  int blocks = gridDim.x;
-
-  // Each thread is responsible for 1 element of output tile
-  int local_row = threadIdx.x / TILE_SIZE;
-  int local_col = threadIdx.x % TILE_SIZE;
-
-  for (; tile_idx < total_tiles; tile_idx += blocks) {
-    int m_tile = tile_idx / n_tile_count;
-    int n_tile = tile_idx % n_tile_count;
+  for (uint32_t tile_idx = blockIdx.x; tile_idx < total_tiles; tile_idx += blocks) {
+    uint32_t m_tile = tile_idx / n_tile_count;
+    uint32_t n_tile = tile_idx % n_tile_count;
+    uint32_t local_row = threadIdx.x / TILE_SIZE;
+    uint32_t local_col = threadIdx.x % TILE_SIZE;
 
     // Global row and col
-    int global_row_a = m_tile * TILE_SIZE + local_row;
-    int global_col_b = n_tile * TILE_SIZE + local_col;
+    uint32_t global_row_a = m_tile * TILE_SIZE + local_row;
+    uint32_t global_col_b = n_tile * TILE_SIZE + local_col;
 
-    // Main loop
     float acc = 0;
-    for (int k_tile = 0; k_tile < k_tile_count; k_tile++) {
+
+    // Loop over K tiles
+    for (uint32_t k_tile = 0; k_tile < k_tile_count; k_tile++) {
+      uint32_t global_k = k_tile * TILE_SIZE;
+
       // Load A tile
-      int global_col_a = k_tile * TILE_SIZE + local_col;
+      uint32_t global_col_a = global_k + local_col;
       sA[threadIdx.x] = A[global_row_a * K + global_col_a];
 
       // Load B tile
-      int global_row_b = k_tile * TILE_SIZE + local_row;
+      uint32_t global_row_b = global_k + local_row;
       sB[threadIdx.x] = B[global_row_b * N + global_col_b];
 
       // Synchronize all threads in CTA to ensure that
       // all threads see the same sA and sB
-      __syncthreads();
+      sync_cta();
 
-      // Compute dot product acc = sum(Aik * Bkj) for k = 0, ..., TILE_SIZE
-      for (int k = 0; k < TILE_SIZE; k++) {
+      // Dot product sA . sB
+      #pragma unroll
+      for (uint32_t k = 0; k < TILE_SIZE; k++) {
         acc += sA[local_row * TILE_SIZE + k] * sB[k * TILE_SIZE + local_col];
       }
 
       // Synchronize all threads in CTA to ensure that
       // all threads have already finished reading both sA and sB
-      __syncthreads();
+      sync_cta();
     }
 
-    // Epilogue: store acc back to GMEM
-    // Each thread is responsible for 1 element of output tile
     if (global_row_a < OUT_ROWS && global_col_b < OUT_COLS) {
       C[global_row_a * OUT_COLS + global_col_b] = acc;
     }
@@ -248,7 +245,7 @@ int main(int argc, char **argv) {
   int per_sm_blocks = 1;
   CHECK_CUDA_ERROR(
     cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &per_sm_blocks, persistent_gemm_kernel<TILE_SIZE>,
+      &per_sm_blocks, persistent_gemm_kernel,
       threads, 0
     )
   );
@@ -263,6 +260,8 @@ int main(int argc, char **argv) {
   CHECK_CUDA_ERROR(cudaEventCreate(&e0));
   CHECK_CUDA_ERROR(cudaEventCreate(&e1));
 
+  uint32_t dynamicSmemBytes = 2 * TILE_SIZE * TILE_SIZE * sizeof(float);
+
   printf("Launching persistent_gemm_kernel\n");
   CHECK_CUDA_ERROR(cudaEventRecord(e0, stream));
 
@@ -271,18 +270,41 @@ int main(int argc, char **argv) {
   // Copy inputs from CPU to GPU
   CHECK_CUDA_ERROR(cudaMemcpyAsync(dev_a_ptr, A.data(), bytes_a, cudaMemcpyHostToDevice, stream));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(dev_b_ptr, B.data(), bytes_b, cudaMemcpyHostToDevice, stream));
-  // persistent_gemm_kernel<TILE_SIZE><<<blocks, threads, 0, stream>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr, M, N, pM, pN, pK);
-  void* kernel_args[] = {&dev_a_ptr, &dev_b_ptr, &dev_c_ptr, &M, &N, &pM, &pN, &pK};
+  // persistent_gemm_kernel<<<blocks, threads, dynamicSmemBytes, stream>>>(dev_a_ptr, dev_b_ptr, dev_c_ptr, M, N, pM, pN, pK, TILE_SIZE);
+
+  cudaFuncSetAttribute(
+    persistent_gemm_kernel,
+    cudaFuncAttributeMaxDynamicSharedMemorySize,
+    dynamicSmemBytes
+  );
+
+  cudaLaunchConfig_t launchConfig;
+
+  cudaLaunchAttribute attrs[1];
+  attrs[0].id = cudaLaunchAttributeClusterDimension;
+  attrs[0].val.clusterDim.x = 1;
+  attrs[0].val.clusterDim.y = 1;
+  attrs[0].val.clusterDim.z = 1;
+
+  launchConfig.gridDim = dim3(blocks, 1, 1);
+  launchConfig.blockDim = dim3(threads, 1, 1);
+  launchConfig.dynamicSmemBytes = dynamicSmemBytes;
+  launchConfig.attrs = attrs;
+  launchConfig.numAttrs = 1;
+
   CHECK_CUDA_ERROR(
-    cudaLaunchKernel(
-      persistent_gemm_kernel<TILE_SIZE>,
-      blocks,
-      threads,
-      kernel_args,
-      0,
-      stream
+    cudaLaunchKernelEx(
+      &launchConfig,
+      persistent_gemm_kernel,
+      dev_a_ptr, 
+      dev_b_ptr, 
+      dev_c_ptr, 
+      M, N, pM, pN, pK, 
+      TILE_SIZE
     )
   );
+
+  // CHECK_CUDA_ERROR(cudaGetLastError());
   CHECK_CUDA_ERROR(cudaEventRecord(e1, stream));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
 

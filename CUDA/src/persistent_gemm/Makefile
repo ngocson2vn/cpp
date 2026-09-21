@@ -13,8 +13,8 @@ endif
 
 NVCC_FLAGS := $(NVCC_GENCODE_FLAGS)
 
-main: main1 main2
-ptx: main1.ptx main2.ptx
+main: main1 main2 main3
+ptx: main1.ptx main2.ptx main3.ptx
 
 main1: main1.cu
 	$(NVCC) $(NVCC_FLAGS) -o $@ main1.cu
@@ -22,13 +22,21 @@ main1: main1.cu
 main2: main2.cu
 	$(NVCC) $(NVCC_FLAGS) -o $@ main2.cu
 
+main3: main3.cu
+	$(NVCC) $(NVCC_FLAGS) -o $@ main3.cu
+
 main1.ptx: main1.cu
 	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -ptx -o $@ main1.cu
 
 main2.ptx: main2.cu
 	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -ptx -o $@ main2.cu
 
+main3.ptx: main3.cu
+	$(NVCC) $(NVCC_FLAGS) $(INCLUDES) -ptx -o $@ main3.cu
+
 run: main
+	@echo
+	./main3
 	@echo
 	./main2
 	@echo

@@ -55,7 +55,11 @@ int main() {
   int blocks = 1;
   int threads = 256;
   cudaOccupancyMaxPotentialBlockSize(&blocks, &threads, gpu_add_vectors, 0, 0);
-  printf("blocks = %d, threads = %d\n", blocks, threads);
+  printf("[PRE] blocks = %d, threads = %d\n", blocks, threads);
+  threads = std::min(N, threads);
+  blocks = std::min(blocks, (N + threads - 1) / threads);
+  printf("[OPT] blocks = %d, threads = %d\n", blocks, threads);
+
   gpu_add_vectors<<<blocks, threads, 0, 0>>>(dev_vec1.data().get(), dev_vec2.data().get(), dev_out.data().get(), N);
   cudaDeviceSynchronize();
 
