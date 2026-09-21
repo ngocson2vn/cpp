@@ -1,11 +1,11 @@
 # XOR
 ### XOR is associative
-The bitwise XOR operation (often denoted as ⊕) is associative.<br/>
-The equation $(a \oplus b) \oplus c = a \oplus (b \oplus c)$ holds for all integers $a$, $b$, and $c$.
+The bitwise XOR operation (often denoted as \oplus) is associative.<br/>
+The equation $`(a \oplus b) \oplus c = a \oplus (b \oplus c)`$ holds for all integers $a$, $b$, and $c$.
 
-Bitwise XOR operates independently on each bit of the binary representations of the numbers. For each corresponding bit position, the operation is equivalent to addition modulo 2 (i.e., 0 ⊕ 0 = 0, 0 ⊕ 1 = 1, 1 ⊕ 0 = 1, 1 ⊕ 1 = 0).
+Bitwise XOR operates independently on each bit of the binary representations of the numbers. For each corresponding bit position, the operation is equivalent to addition modulo 2 (i.e., $0 \oplus 0 = 0$, $0 \oplus 1 = 1$, $1 \oplus 0 = 1$, $1 \oplus 1 = 0$).
 
-Addition modulo 2 is associative because $(x + y) \mod 2 + z \mod 2 = x + (y + z) \mod 2$ for any bits $x$, $y$, and $z$ (this follows from the associativity of addition in general).
+Addition modulo 2 is associative because $`(x + y) \mod 2 + z \mod 2 = x + (y + z) \mod 2`$ for any bits $x$, $y$, and $z$ (this follows from the associativity of addition in general).
 
 Since this holds for every bit independently, the overall bitwise XOR operation is associative.
 
@@ -22,10 +22,8 @@ Thus, $1 + 1 \equiv 0 \pmod{2}$, often written shorthand as "1 + 1 = 0 (mod 2)".
 
 ## XOR is invertible
 Given the following two expressions:<br/>
-$
-X_1 = r \oplus c_1 \\
-X_2 = r \oplus c_2
-$
+$`X_1 = r \oplus c_1`$ <br/>
+$`X_2 = r \oplus c_2`$
 
 where, $c_1 \neq c_2$. How to prove that $X_1 \neq X_2$?
 
