@@ -7,7 +7,7 @@ set -e
 # export TORCHDYNAMO_REPRO_FORWARD_ONLY=1
 # export TORCHDYNAMO_REPRO_IGNORE_GUARD_PRINT_FAILURE=1
 
-export CUDA_VERSION=12.4
+export CUDA_VERSION=12.8
 
 export TORCH_COMPILE_DEBUG_DIR="./debug_dir"
 mkdir -p ${TORCH_COMPILE_DEBUG_DIR}
@@ -36,7 +36,7 @@ export EXPOSE_SERIALIZABLE_BACKEND_CALLABLE=1
 
 
 export LD_LIBRARY_PATH=/usr/local/cuda-${CUDA_VERSION}/lib64:/usr/local/cuda-${CUDA_VERSION}/extras/CUPTI/lib64:/usr/lib/aarch64-linux-gnu/nvshmem/13
-export LD_LIBRARY_PATH=/data03/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/nvidia/cudnn/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=${HOME}/.pyenv/versions/3.11.2/lib/python3.11/site-packages/nvidia/cudnn/lib:$LD_LIBRARY_PATH
 # export PYTHONPATH=/data00/home/son.nguyen/workspace/triton_dev/bytedance/triton/python
 
 # export TRITON_OVERRIDE_ARCH=sm86

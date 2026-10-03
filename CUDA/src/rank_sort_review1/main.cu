@@ -11,6 +11,7 @@
 #include <thrust/device_vector.h>
 
 __global__ void simple_sort(const int* in, int* out, const int N) {
+  const int TOTAL_THREADS = gridDim.x * blockDim.x;
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   while (i < N) {
     int val = in[i];
@@ -23,7 +24,7 @@ __global__ void simple_sort(const int* in, int* out, const int N) {
 
     out[rank] = val;
 
-    i += gridDim.x + blockDim.x;
+    i += TOTAL_THREADS;
   }
 }
 

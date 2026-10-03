@@ -100,11 +100,12 @@ int get_max_grid_x() {
 int main() {
   // N must be power of 2
   constexpr int N = 1 << 16;
+  printf("The number of trailing zeros: %zu\n", __builtin_ctzll(N));
 
   std::random_device rd;  // Will be used to obtain a seed for the random number engine
   std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
   std::uniform_int_distribution<int> dist(0, 10000);
-  
+
   std::vector<int> host_vec(N, 0);
   for (auto& e : host_vec) {
     e = dist(gen);

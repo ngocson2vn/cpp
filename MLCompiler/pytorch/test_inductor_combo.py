@@ -37,10 +37,11 @@ logging.basicConfig(level=logging.DEBUG)
 from custom_pass import CustomFusion
 torch._inductor.config._pre_fusion_custom_pass = CustomFusion.fuse
 
-import ipdb
+# import ipdb
 
 torch.set_float32_matmul_precision('high')
-logging.getLogger("torch._inductor.scheduler").setLevel(logging.DEBUG)
+# logging.getLogger("torch._inductor.scheduler").setLevel(logging.DEBUG)
+logging.getLogger("torch._inductor.scheduler").setLevel(logging.INFO)
 # import torch._inductor.scheduler
 # torch._inductor.scheduler.fusion_log.setLevel(logging.DEBUG)
 
