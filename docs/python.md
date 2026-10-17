@@ -372,3 +372,9 @@ plt.plot(range(len(durations)), durations)
 plt.show()
 print()
 ```
+
+# SSL
+```python
+import ssl
+print('SSL support available:', ssl.OPENSSL_VERSION)
+```

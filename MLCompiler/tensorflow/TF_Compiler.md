@@ -59,6 +59,8 @@ Core Dialects of MLIR-HLO: <br/>
 - MHLO (Meta HLO): The core tensor-level dialect modeling operations with support for **dynamic shapes**, **control flow**, and **multi-results**.
 - LMHLO (Late Meta HLO): A lower-level buffer-level dialect operating on memory references (memrefs) post-allocation with side effects.
 
+MHLO has become a universal lingua franca (language) for machine learning models.
+
 Lowering: <br/>
 The **LegalizeTFNoFallback** pass lowers TensorFlow dialect to CHLO.
 - TensorFlow dialect: [./example/cluster.mlir](./example/cluster.mlir)
@@ -66,6 +68,37 @@ The **LegalizeTFNoFallback** pass lowers TensorFlow dialect to CHLO.
 
 Next, the **ChloLegalizeToHloPass** pass takes Client HLO (CHLO) and lowers it down to standard MHLO where all shapes and broadcasts are explicitly defined.
 - MHLO dialect: [./example/pm_LowerTFtoLoops.mlir](./example/pm_LowerTFtoLoops.mlir#L27)
+
+### 2. MLIR-HLO -> Linalg
+**Why Linalg?** <br/>
+1\. The Power of `linalg.generic`
+
+MHLO has hundreds of specific, named operations (mhlo.add, mhlo.dot, mhlo.convolution, etc.). If a hardware vendor wants to support MHLO natively, they have to write custom lowering logic for every single one of those operations.
+
+Linalg reduces this massive surface area by representing almost all dense linear algebra using a single, incredibly powerful operation: linalg.generic. Instead of having a specific "convolution" opcode, linalg.generic describes:
+- The shape of the input and output data.
+- How to iterate over that data (the iteration space).
+- How the data maps to memory (using affine indexing maps).
+- The scalar mathematical operation to perform on the loaded elements.
+
+By lowering MHLO to Linalg, a custom compiler backend only needs to know how to optimize and compile `linalg.generic`.
+
+
+2\. Structured Transformations (Tiling and Fusion)
+
+In traditional compilers (like LLVM IR) or standard `for` loops, proving that **tiling** or **fusion** is mathematically safe is incredibly difficult because the multi-dimensional context of the matrix has been lost. Linalg preserves this multi-dimensional structure. Because memory accesses in Linalg are strictly defined by mathematical formulas (affine maps), the compiler can perform tiling, fusion, and vectorization safely and automatically, without complex dependency analysis.
+
+A epilogue fusion example `res = ReLu(x * 0.5)`: [./example/pm_LowerTFtoLoops.mlir](./example/pm_LowerTFtoLoops.mlir#L263)
+
+
+3\. Hardware Agnostic Lowering
+
+Linalg does not assume what kind of hardware will run the code. Once a compiler has optimized the Linalg representation (tiled it for the target cache size, fused the operations), Linalg can be smoothly lowered into various hardware-specific MLIR dialects. For example, Linalg -> SCF (Structured Control Flow): For standard parallel CPU loops (as you saw in the createConvertLinalgToParallelLoopsPass).
+
+
+**Lowering:** <br/>
+The **LegalizeHloToLinalgPass** pass translates the MHLO operations (like `mhlo.dot` or `mhlo.add`) into MLIR's Linalg (Linear Algebra) dialect. Linalg is a core MLIR dialect, completely independent of XLA.
+
 
 ## 4. Runtime
 We develop a Fusion runtime library to parse and load the model's GraphDef.

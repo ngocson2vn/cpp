@@ -46,6 +46,13 @@ docker run --rm -it --privileged --gpus all --network host --cgroupns host -v /s
 # Deamon mode
 docker run -d --privileged --gpus all --network host --cgroupns host -v /sys/fs/cgroup:/sys/fs/cgroup:rw --name ${CONTAINER} $IMAGE /sbin/init
 
+# Mount host dirs
+docker run -d --privileged --gpus 1 --network host --cgroupns host \
+  --env CUDA_VISIBLE_DEVICES=0 \
+  -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+  -v ${HOME}/workspace/torch_dev/pypilot_gpu:/root/docker/pypilot_gpu:rw \
+  -v ${HOME}/workspace/torch_dev/pypilot_gpu/log:/var/log/tiger:rw \
+  --name ${NAME} $IMAGE /sbin/init
 
 # enter docker
 docker exec -it <container_name> bash
@@ -62,6 +69,7 @@ docker cp <container_name_or_id>:<container_src_path> <host_dest_path>
 
 # build
 docker build -t sony_torch291_cuda:v1.0.0.1 -f Dockerfile.torch .
+DOCKER_BUILDKIT=1 docker build --build-arg REGION=aliyun_sg -t sony_base_snapshot_pytorch210:latest -f ci/images/torch/inference/cuda/Dockerfile.torch2100_cu131 .
 
 docker commit sony_pilot_torch_270 sony_pilot_torch_270:latest
 

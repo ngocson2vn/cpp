@@ -6,4 +6,7 @@ int main(int argc, char** argv) {
 
   // Print only first n characters
   printf("%.*s\n", n, str);
+
+  float v = 1280.0 / 6;
+  printf("%.2f\n", v);
 }

@@ -32,3 +32,8 @@ git --no-pager show --pretty="" --name-only HEAD | grep -E '\.h|\.cc' | xargs -I
 ```
 To suppress this warning, add `-Wno-deprecated-declarations`.
 
+# Disable some c2y extensions
+```bash
+  cmake -G Ninja -S llvm-project/llvm -B ${LLVM_BUILD_DIR} \
+    -DCMAKE_CXX_FLAGS="-Wno-unused-command-line-argument -Wno-deprecated-declarations -Wno-c2y-extensions -Wno-c2y-extensions" \
+```
