@@ -4,7 +4,9 @@
             "name": "Linux",
             "includePath": [
                 "/usr/local/cuda-13.1/targets/x86_64-linux/include",
-                "${workspaceFolder}/CUDA/src/sm_active"
+                "${env:HOME}/.local/lib/python3.11/site-packages/torch/include",
+                "${env:HOME}/.local/lib/python3.11/site-packages/torch/include/torch/csrc/api/include",
+                "${workspaceFolder}/CUDA/src/**"
             ],
             "defines": [],
             "cStandard": "c17",
@@ -13,7 +15,9 @@
             "browse": {
                 "path": [
                     "/usr/local/cuda-13.1/targets/x86_64-linux/include",
-                    "${workspaceFolder}/CUDA/src/sm_active"
+                    "${env:HOME}/.local/lib/python3.11/site-packages/torch/include",
+                    "${env:HOME}/.local/lib/python3.11/site-packages/torch/include/torch/csrc/api/include",
+                    "${workspaceFolder}/CUDA/src/**"
                 ],
                 "databaseFilename": "${workspaceFolder}/.vscode/vc.db",
                 "limitSymbolsToIncludedHeaders": false
