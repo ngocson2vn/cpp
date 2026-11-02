@@ -1,0 +1,4 @@
+*.o
+*.ptx
+main
+test

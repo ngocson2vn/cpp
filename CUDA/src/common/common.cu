@@ -48,6 +48,31 @@ DVec<T>::DVec(const HVec<T>& hVec) {
   size_ = hVec.size();
 }
 
+template <typename T>
+HVec<T> DVec<T>::cpu() {
+  HVec<T> hVec(size_, T(0));
+
+  auto numBytes = size_ * sizeof(T);
+  auto status = cudaMemcpy(hVec.data(), ptr_, numBytes, cudaMemcpyDeviceToHost);
+  if (status != cudaSuccess) {
+    auto errorName = cudaGetErrorName(status);
+    auto errorString = cudaGetErrorString(status);
+    fprintf(
+      stderr,
+      "ERROR: Failed to copy data from device to host %s: %s\n",
+      errorName,
+      errorString,
+      numBytes
+    );
+    std::exit(1);
+  }
+
+  return hVec;
+}
+
+template HVec<float> DVec<float>::cpu();
+
+
 template <typename HVec>
 void regenHVec(HVec& hVec, const std::string vecFile) {
   std::random_device rd;

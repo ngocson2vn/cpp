@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -12,12 +14,12 @@ template <typename T>
 class DVec {
  public:
   DVec() = default;
-  
-  DVec(T* ptr, std::size_t size) : ptr_(ptr), size_(size) {}
-
-  DVec(std::size_t size, T initVal);
 
   DVec(const HVec<T>& hVec);
+
+  DVec(std::size_t size, T initVal) : DVec(HVec<T>(size, initVal)) {}
+
+  DVec(T* ptr, std::size_t size) : ptr_(ptr), size_(size) {}
 
   ~DVec() {
     if (!ptr_) {
@@ -26,8 +28,12 @@ class DVec {
   }
 
   T* data() { return ptr_; };
+
   std::size_t size() { return size_; }
+
   bool empty() { return size_ == 0; }
+
+  HVec<T> cpu();
 
  private:
   T* ptr_;
