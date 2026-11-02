@@ -9,6 +9,8 @@
 
 #include <common/common.h>
 
+#include "constants.h"
+
 __device__ uint32_t nextPowerOf2(uint32_t n) {
   auto zeros = __clz(n - 1);
   return 1U << (32 - zeros);
@@ -82,10 +84,6 @@ __global__ void rmsNormKernel(DataType* outData,
 }
 
 int main(int argc, char** argv) {
-  using DataType = float;
-
-  uint32_t ROWS = 3;
-  uint32_t COLS = 33;
   if (argc > 2) {
     try {
       ROWS = std::stoi(argv[1]);
@@ -105,7 +103,7 @@ int main(int argc, char** argv) {
   DVec<DataType> gamma = genDVec<DataType>(COLS, "gamma");
 
   // Allocate output
-  DVec devOut(ROWS * COLS, DataType(0));
+  DVec<DataType> devOut(ROWS * COLS, DataType(0));
 
 
   // 
@@ -139,7 +137,7 @@ int main(int argc, char** argv) {
   printf("blocks = %d threads = %d warps = %d\n", blocks, threads, threads >> 5);
 
   rmsNormKernel<<<blocks, threads, smemBytes>>>(
-    devOut.data().get(),
+    devOut.data(),
     input.data(),
     gamma.data(),
     ROWS,
@@ -160,7 +158,9 @@ int main(int argc, char** argv) {
     fprintf(stderr, "%s: %s\n", errorName, errorString);
   }
 
-  HVec hostOut = devOut;
+  HVec<DataType> hostOut = devOut.cpu();
+
+  printf("\n[SONY] RMSNorm output:\n");
   for (uint32_t i = 0; i < ROWS; i++) {
     printf("[%f", hostOut[i * COLS + 0]);
     for (uint32_t j = 1; j < COLS; j++) {

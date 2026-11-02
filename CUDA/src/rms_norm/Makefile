@@ -11,6 +11,8 @@ INCLUDES := -I$(CUDA_INCLUDE_DIR) -I$(CUDA_CCCL_DIR) -I$(CUDA_SRC_DIR) -I$(TORCH
 LIBS := -L$(TORCH_DIR)/lib -L$(CUDA_SRC_DIR)/common
 $(info PyTorch lib dir: $(TORCH_DIR)/lib)
 
+default: main test
+
 main: main.cu
 	$(NVCC) $(GENCODE_FLAGS) $(INCLUDES) $(LIBS) -o $@ main.cu -lcommon -ltorch -ltorch_cpu -ltorch_cuda -lc10
 	/usr/bin/patchelf --set-rpath $(TORCH_DIR)/lib main
@@ -23,6 +25,9 @@ test: test.cu
 	/usr/bin/patchelf --set-rpath $(TORCH_DIR)/lib test
 
 ptx: main.ptx
+
+run:
+	./run.sh
 
 clean:
 	rm -fv main test *.ptx

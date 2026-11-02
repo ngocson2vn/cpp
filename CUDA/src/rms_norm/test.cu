@@ -3,11 +3,18 @@
 
 #include <torch/torch.h>
 
-using DataType = float;
+#include "constants.h"
 
 int main(int argc, char** argv) {
-  uint32_t ROWS = 3;
-  uint32_t COLS = 33;
+  if (argc > 2) {
+    try {
+      ROWS = std::stoi(argv[1]);
+      COLS = std::stoi(argv[2]);
+    } catch(const std::exception& ex) {
+      printf("Default ROWS = %d COLS = %d\n", ROWS, COLS);
+    }
+  }
+  printf("ROWS = %d COLS = %d\n", ROWS, COLS);
 
   DVec<DataType> input = genDVec<DataType>(ROWS * COLS, "input");
   DVec<DataType> gamma = genDVec<DataType>(COLS, "gamma");
@@ -39,6 +46,8 @@ int main(int argc, char** argv) {
   // std::cout << "outTensor: " << outTensor << "\n\n";
 
   auto outData = outTensor.data_ptr<DataType>();
+
+  printf("\n[TORCH] RMSNorm output:\n");
   for (uint32_t i = 0; i < ROWS; i++) {
     printf("[%f", outData[i * COLS + 0]);
     for (uint32_t j = 1; j < COLS; j++) {
