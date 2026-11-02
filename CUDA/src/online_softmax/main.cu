@@ -1,23 +1,9 @@
-#include <cstdio>
 #include <cassert>
 #include <cfloat>
 
-#include <random>
-#include <vector>
+#include <common/common.h>
 
-#include <cuda_runtime.h>
-
-#define CHECK_CUDA_ERROR(callExpr)                                             \
-  do {                                                                         \
-    auto status = callExpr;                                                    \
-    if (status != cudaSuccess) {                                               \
-      auto errorName = cudaGetErrorName(status);                               \
-      auto errorStr = cudaGetErrorString(status);                              \
-      fprintf(stderr, "%s:%d %s: %s\n", __FILE__, __LINE__, errorName,         \
-              errorStr);                                                       \
-      std::exit(1);                                                            \
-    }                                                                          \
-  } while (0)
+#include "constants.h"
 
 __device__ __forceinline__ uint32_t nextPowerOf2(const uint32_t n) {
   auto zeros = __clz(n - 1);
@@ -150,30 +136,22 @@ __global__ void softmaxKernel(const DataType *inData, DataType *outData,
 }
 
 int main(int argc, char **argv) {
-  using DataType = float;
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<float> dist(0.0, 1.0);
-
-  constexpr uint32_t ROWS = 1024;
-  uint32_t COLS = 33;
-  if (argc > 1) {
-    COLS = std::stoi(argv[1]);
+  if (argc > 2) {
+    try {
+      ROWS = std::stoi(argv[1]);
+      COLS = std::stoi(argv[2]);
+    } catch(const std::exception& ex) {
+      printf("Default ROWS = %d COLS = %d\n", ROWS, COLS);
+    }
   }
-
-  const uint32_t numBytes = ROWS * COLS * sizeof(DataType);
-
   assert(COLS >= 32 && "Row size must be >= 32!");
+  printf("ROWS = %d COLS = %d\n", ROWS, COLS);
 
-  std::vector<float> inData(ROWS * COLS, 0);
-  for (int i = 0; i < ROWS * COLS; i++)
-    inData[i] = dist(gen);
+  // Gen input
+  DVec<DataType> input = genDVec<DataType>(ROWS * COLS, "input");
 
-  DataType *devIn, *devOut;
-  cudaMalloc(&devIn, numBytes);
-  cudaMalloc(&devOut, numBytes);
-
-  cudaMemcpy(devIn, inData.data(), numBytes, cudaMemcpyHostToDevice);
+  // Allocate output
+  DVec<DataType> devOut(ROWS * COLS, DataType(0));
 
   int threads = (COLS / 32) * 32;
   if (threads > 1024) {
@@ -207,24 +185,13 @@ int main(int argc, char **argv) {
   printf("blocks = %d threads = %d\n", ROWS, threads);
 
 
-  softmaxKernel<DataType><<<blocks, threads, smemBytes>>>(devIn, devOut, ROWS, COLS);
+  softmaxKernel<DataType><<<blocks, threads, smemBytes>>>(input.data(), devOut.data(), ROWS, COLS);
   CHECK_CUDA_ERROR(cudaGetLastError());
   CHECK_CUDA_ERROR(cudaDeviceSynchronize());
 
-  std::vector<DataType> outData(ROWS * COLS, 0);
-  cudaMemcpy(outData.data(), devOut, numBytes, cudaMemcpyDeviceToHost);
+  auto outData = devOut.cpu();
 
-  // printf("Input tensor:\n");
-  // for (uint32_t i = 0; i < ROWS; i++) {
-  //   // printf("Row %d: ", i);
-  //   printf("[%.3f", inData[i * COLS + 0]);
-  //   for (uint32_t j = 1; j < COLS; j++) {
-  //     printf(", %.3f", inData[i * COLS + j]);
-  //   }
-  //   printf("]\n\n");
-  // }
-
-  printf("\nOutput tensor:\n");
+  printf("\n[SONY] softmax output:\n");
   for (uint32_t i = 0; i < ROWS; i++) {
     // printf("Row %d: ", i);
     printf("[%f", outData[i * COLS + 0]);
