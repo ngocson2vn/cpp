@@ -9,6 +9,6 @@ if [[ -f ./main ]]; then
   ./main ${ROWS} ${COLS}
 fi
 
-if [[ -f ./test ]]; then
-  ./test ${ROWS} ${COLS}
+if [[ -f ./torch ]]; then
+  ./torch ${ROWS} ${COLS}
 fi

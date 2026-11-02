@@ -11,18 +11,18 @@ INCLUDES := -I$(CUDA_INCLUDE_DIR) -I$(CUDA_CCCL_DIR) -I$(CUDA_SRC_DIR) -I$(TORCH
 LIBS := -L$(TORCH_DIR)/lib -L$(CUDA_SRC_DIR)/common
 $(info PyTorch lib dir: $(TORCH_DIR)/lib)
 
-default: main test
+default: main torch
 
 main: main.cu
-	$(NVCC) $(GENCODE_FLAGS) $(INCLUDES) $(LIBS) -o $@ main.cu -lcommon -ltorch -ltorch_cpu -ltorch_cuda -lc10
+	$(NVCC) $(GENCODE_FLAGS) $(INCLUDES) $(LIBS) -o $@ main.cu -lcommon
 	/usr/bin/patchelf --set-rpath $(TORCH_DIR)/lib main
 
 main.ptx: main.cu
 	$(NVCC) $(GENCODE_FLAGS) $(INCLUDES) $(LIBS) -ptx -o $@ main.cu
 
-test: test.cu
-	$(NVCC) $(GENCODE_FLAGS) $(INCLUDES) $(LIBS) -o $@ test.cu -lcommon -ltorch -ltorch_cpu -ltorch_cuda -lc10
-	/usr/bin/patchelf --set-rpath $(TORCH_DIR)/lib test
+torch: torch.cu
+	$(NVCC) $(GENCODE_FLAGS) $(INCLUDES) $(LIBS) -o $@ torch.cu -lcommon -ltorch -ltorch_cpu -ltorch_cuda -lc10
+	/usr/bin/patchelf --set-rpath $(TORCH_DIR)/lib torch
 
 ptx: main.ptx
 
@@ -30,4 +30,4 @@ run:
 	./run.sh
 
 clean:
-	rm -fv main test *.ptx
+	rm -fv main torch *.ptx

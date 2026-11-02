@@ -7,6 +7,19 @@
 
 #include <cuda_runtime.h>
 
+#define CHECK_CUDA_ERROR(callExpr)                                             \
+  do {                                                                         \
+    auto status = callExpr;                                                    \
+    if (status != cudaSuccess) {                                               \
+      auto errorName = cudaGetErrorName(status);                               \
+      auto errorStr = cudaGetErrorString(status);                              \
+      fprintf(stderr, "%s:%d %s: %s\n", __FILE__, __LINE__, errorName,         \
+              errorStr);                                                       \
+      std::exit(1);                                                            \
+    }                                                                          \
+  } while (0)
+
+
 template <typename T>
 using HVec = std::vector<T>;
 
