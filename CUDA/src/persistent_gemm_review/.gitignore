@@ -1,1 +1,6 @@
+*.o
+*.ptx
+*.dat
 main
+test
+torch

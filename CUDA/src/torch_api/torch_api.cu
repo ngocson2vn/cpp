@@ -7,6 +7,7 @@ HVec<T> torchGemm(const HVec<T>& A,
                   const uint32_t M,
                   const uint32_t N,
                   const uint32_t K) {
+  printf("\nLaunching TORCH GEMM\n");
   torch::Device device(c10::kCUDA, 0);
   torch::TensorOptions options(device);
   auto tensorA = torch::from_blob(
