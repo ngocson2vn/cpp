@@ -10,6 +10,11 @@
 
 namespace fs = std::filesystem;
 
+// template <typename T>
+// DVec<T> HVec<T>::gpu() {
+//   return DVec<T>(*this);
+// }
+
 template <typename T>
 DVec<T>::DVec(const HVec<T>& hVec) {
   if (hVec.empty()) return;
@@ -95,7 +100,7 @@ void regenHVec(HVec& hVec, const std::string vecFile) {
 }
 
 template <typename T> 
-DVec<T> genDVec(uint32_t numElems, const std::string& name) {
+HVec<T> genHVec(uint32_t numElems, const std::string& name) {
   HVec<T> hVec(numElems, T(0));
 
   std::string vecFile = name + ".dat";
@@ -108,6 +113,7 @@ DVec<T> genDVec(uint32_t numElems, const std::string& name) {
         hVecSize = *reinterpret_cast<std::size_t*>(&header[0]);
       } else {
         fprintf(stderr, "ERROR: Failed to read vector size from %s\n", vecFile.c_str());
+        return HVec<T>();
       }
 
       if (hVecSize != numElems) {
@@ -119,17 +125,48 @@ DVec<T> genDVec(uint32_t numElems, const std::string& name) {
           printf("Vector size: %zu\n", hVecSize);
         } else {
           fprintf(stderr, "ERROR: Failed to read vector elements from %s\n", vecFile.c_str());
+          return HVec<T>();
         }
       }
     } else {
       fprintf(stderr, "ERROR: Failed to open file %s\n", vecFile.c_str());
+      return HVec<T>();
     }
   } else {
     regenHVec(hVec, vecFile);
   }
+
+  return hVec;
+}
+
+template <typename T> 
+DVec<T> genDVec(uint32_t numElems, const std::string& name) {
+  HVec<T> hVec = genHVec<T>(numElems, name);
 
   DVec<T> dVec(hVec);
   return dVec;
 }
 
 template DVec<float> genDVec<float>(uint32_t numElems, const std::string& name);
+
+// Compare two host vectors
+template <typename T>
+bool diff(const HVec<T>& a, const HVec<T>& b) {
+  bool ok = (a.size() == b.size());
+  if (!ok) {
+    fprintf(stderr, "ERROR: a.size() != b.size()\n");
+    return false;
+  }
+
+  constexpr float epsilon = 1e-3;
+  for (int i = 0; i < a.size(); i++) {
+    if (std::abs(a[i] - b[i]) > epsilon) {
+      fprintf(stderr, "ERROR: i = %d: a value %f != %f b value\n", i, a[i], b[i]);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template bool diff<float>(const HVec<float>& a, const HVec<float>& b);

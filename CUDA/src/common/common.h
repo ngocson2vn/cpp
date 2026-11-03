@@ -21,7 +21,31 @@
 
 
 template <typename T>
-using HVec = std::vector<T>;
+class DVec;
+
+template <typename T>
+class HVec {
+ public:
+  HVec() = default;
+
+  HVec(std::size_t numElems, T initVal = T(0))
+    : vec(numElems, initVal) {}
+
+  T& operator[](std::size_t idx) const {
+    return const_cast<T&>(vec[idx]);
+  }
+
+  T* data() const { return const_cast<T*>(vec.data()); }
+
+  std::size_t size() const { return vec.size(); }
+
+  bool empty() const { return vec.empty(); }
+
+  DVec<T> gpu() const { return DVec<T>(*this); }
+
+ private:
+  std::vector<T> vec;
+};
 
 template <typename T>
 class DVec {
@@ -60,4 +84,10 @@ struct HVecDVec {
 };
 
 template <typename T> 
+HVec<T> genHVec(uint32_t numElems, const std::string& name);
+
+template <typename T> 
 DVec<T> genDVec(uint32_t numElems, const std::string& name);
+
+template <typename T>
+bool diff(const HVec<T>& a, const HVec<T>& b);
