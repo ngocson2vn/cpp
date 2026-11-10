@@ -180,6 +180,13 @@ Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especiall
 ```
 
 # Flow
+```python
+# PyTorch 2.10
+export TORCH_CACHING_PRECOMPILE=1
+
+self.forward = torch.compile(self.forward, backend="inductor", fullgraph=True)
+```
+
 ```text
 Dynamo -> FX graph -> Inductor 
     │                      │
