@@ -5,7 +5,7 @@ pip install --upgrade pip
 pip install numpy filelock fsspec jinja2 networkx
 
 # cuda-deps
-./cuda-deps.sh
+../../CUDA/scripts/cuda-deps.sh
 
 # libomp
 sudo apt install -y libomp-dev
