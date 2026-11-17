@@ -29,3 +29,7 @@ wget https://developer.download.nvidia.com/compute/nvshmem/3.5.19/local_installe
 
 apt install ./nvshmem-local-repo-debian12-3.5.19_3.5.19-1_arm64.deb
 apt install /var/nvshmem-local-repo-debian12-3.5.19/libnvshmem3-cuda-13_3.5.19-1_arm64.deb
+
+export CUDA_LIB_DIR=/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/nvidia/cu13/lib
+export CUDNN_LIB_DIR=/home/son.nguyen/.pyenv/versions/3.11.2/lib/python3.11/site-packages/nvidia/cudnn/lib
+export LD_LIBRARY_PATH=${CUDA_LIB_DIR}:${CUDNN_LIB_DIR}:${LD_LIBRARY_PATH}
