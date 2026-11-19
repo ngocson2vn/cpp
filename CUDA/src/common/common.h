@@ -31,6 +31,9 @@ class HVec {
   HVec(std::size_t numElems, T initVal = T(0))
     : vec(numElems, initVal) {}
 
+  HVec(const std::vector<T>& stdVec)
+    : vec(stdVec) {}
+
   T& operator[](std::size_t idx) const {
     return const_cast<T&>(vec[idx]);
   }
@@ -42,6 +45,27 @@ class HVec {
   bool empty() const { return vec.empty(); }
 
   DVec<T> gpu() const { return DVec<T>(*this); }
+
+  void print() {
+    if (empty()) {
+      printf("[]\n");
+      return;
+    }
+
+    if constexpr(std::is_same<T, float>()) {
+      printf("[%f", vec[0]);
+      for (int i = 1; i < vec.size(); i++) {
+        printf(", %f", vec[i]);
+      }
+      printf("]\n");
+    } else {
+      printf("[%d", vec[0]);
+      for (int i = 1; i < vec.size(); i++) {
+        printf(", %d", vec[i]);
+      }
+      printf("]\n");
+    }
+  }
 
  private:
   std::vector<T> vec;

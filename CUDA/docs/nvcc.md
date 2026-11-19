@@ -28,6 +28,12 @@ It can take two different types of values, which serve completely different purp
 * *Result:* When you run the program, the NVIDIA graphics driver on the host machine will grab that PTX and perform Just-In-Time (JIT) compilation to turn it into the correct binary for whatever GPU happens to be installed. This guarantees forward compatibility with future GPUs, but adds a slight delay the very first time the application launches.
 <br/><br/>
 
+## Link with libtorch_cuda.so
+```bash
+$(NVCC) $(GENCODE_FLAGS) $(INCLUDES) $(LIBS) -Xlinker=--no-as-needed -o $@ main.cu -lcommon -ltorch_api -ltorch -ltorch_cpu -ltorch_cuda -lc10
+```
+The flag `-Xlinker=--no-as-needed` forces linker to always link `main` with `libtorch_cuda.so`.
+
 
 # Errors
 ## Error: undefined hidden symbol
@@ -136,3 +142,4 @@ nvcc ... -gencode arch=compute_100,code=\"sm_100,compute_100\"
 2. Embeds the `compute_100` PTX code.
 3. When you launch the program on your `sm_120` device, the NVIDIA driver sees the PTX code and automatically JIT-compiles it into an `sm_120` binary on the fly.
 <br/><br/>
+

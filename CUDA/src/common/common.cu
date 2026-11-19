@@ -76,6 +76,8 @@ HVec<T> DVec<T>::cpu() {
 }
 
 template HVec<float> DVec<float>::cpu();
+template HVec<uint32_t> DVec<uint32_t>::cpu();
+template HVec<int64_t> DVec<int64_t>::cpu();
 
 
 template <typename HVec>
@@ -148,6 +150,8 @@ DVec<T> genDVec(uint32_t numElems, const std::string& name) {
 }
 
 template DVec<float> genDVec<float>(uint32_t numElems, const std::string& name);
+template DVec<uint32_t> genDVec<uint32_t>(uint32_t numElems, const std::string& name);
+template DVec<int64_t> genDVec<int64_t>(uint32_t numElems, const std::string& name);
 
 // Compare two host vectors
 template <typename T>
